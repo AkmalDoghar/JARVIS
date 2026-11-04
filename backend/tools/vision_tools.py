@@ -61,21 +61,24 @@ def capture_desktop_screenshot(
     """
     img: Optional[Image.Image] = None
 
-    # Method 1: Win32 GDI with explicit WindowStation & Desktop handle switch (Fastest & most robust)
+    # Method 1: Win32 GDI (Fastest & most robust)
     try:
         user32 = ctypes.windll.user32
         gdi32 = ctypes.windll.gdi32
 
-        # Connect thread to interactive window station and default desktop
-        hwinsta = user32.OpenWindowStationW("winsta0", False, 0xF037F)
-        if hwinsta:
-            user32.SetProcessWindowStation(hwinsta)
-        hdesk = user32.OpenDesktopW("default", 0, False, 0x01FF)
-        if hdesk:
-            user32.SetThreadDesktop(hdesk)
-
         hwnd = user32.GetDesktopWindow()
         hdc_screen = user32.GetDC(hwnd)
+
+        # Fallback for background service: connect thread to interactive window station if DC failed
+        if not hdc_screen:
+            hwinsta = user32.OpenWindowStationW("winsta0", False, 0xF037F)
+            if hwinsta:
+                user32.SetProcessWindowStation(hwinsta)
+            hdesk = user32.OpenDesktopW("default", 0, False, 0x01FF)
+            if hdesk:
+                user32.SetThreadDesktop(hdesk)
+            hdc_screen = user32.GetDC(hwnd)
+
         hdc_mem = gdi32.CreateCompatibleDC(hdc_screen)
 
         width = user32.GetSystemMetrics(0)

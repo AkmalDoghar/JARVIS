@@ -81,3 +81,4 @@ def get_autostart_status() -> Dict[str, Any]:
         "command": cmd,
         "default_command": _get_default_launch_command()
     }
+

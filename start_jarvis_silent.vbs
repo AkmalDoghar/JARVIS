@@ -18,3 +18,4 @@ If FSO.FileExists(BatPath) Then
 End If
 
 Set FSO = Nothing
+

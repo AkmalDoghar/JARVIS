@@ -11,3 +11,4 @@ call .\.venv\Scripts\activate.bat
 echo Starting JARVIS Desktop Supervisor, Tray App, and Global Hotkeys...
 python start_jarvis_desktop.py
 pause
+

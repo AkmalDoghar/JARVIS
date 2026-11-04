@@ -38,3 +38,4 @@ __all__ = [
     "start_tray_app",
     "stop_tray_app"
 ]
+

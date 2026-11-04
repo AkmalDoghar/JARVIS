@@ -950,6 +950,37 @@ def api_desktop_hotkey_toggle(request: HotkeyToggleRequest):
         stop_hotkey_listener()
     return {"status": "success", "hotkey": get_hotkey_status()}
 
+# ======================================================================
+# PHASE 11: OFFLINE & HYBRID FALLBACK ENGINE ENDPOINTS
+# ======================================================================
+
+class NetworkModeRequest(BaseModel):
+    mode: str  # "auto", "cloud_only", "offline_only"
+
+@app.get("/api/network/status")
+def api_network_status():
+    """Retrieve real-time network connectivity, latency, operational mode, and local LLM status."""
+    from backend.network.connectivity import get_network_status
+    return get_network_status()
+
+@app.post("/api/network/mode")
+def api_network_mode_set(request: NetworkModeRequest):
+    """Update runtime network mode ('auto', 'cloud_only', 'offline_only')."""
+    from backend.network.connectivity import set_network_mode, get_network_status
+    try:
+        res = set_network_mode(request.mode)
+        res["network_status"] = get_network_status()
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/network/local-llm")
+def api_network_local_llm():
+    """Probe for running local LLM instances (Ollama, LM Studio, llama.cpp)."""
+    from backend.agent.local_llm import detect_local_llm
+    return detect_local_llm(force_refresh=True)
+
+
 
 if __name__ == "__main__":
     import uvicorn

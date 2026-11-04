@@ -223,3 +223,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         stop_tray_app()
         print("Tray test stopped.")
+

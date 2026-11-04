@@ -1106,6 +1106,20 @@ class JarvisBrain:
                 "models": [os.getenv("OPENAI_MODEL", "gpt-4o-mini")]
             })
 
+        # Phase 11: Local LLM Provider (Ollama, LM Studio, llama.cpp)
+        try:
+            from backend.agent.local_llm import detect_local_llm, get_local_openai_client
+            local_info = detect_local_llm()
+            if local_info.get("available") and local_info.get("base_url"):
+                self.providers.append({
+                    "provider": local_info["provider"],
+                    "client": get_local_openai_client(local_info["base_url"]),
+                    "models": local_info["models"],
+                    "is_local": True
+                })
+        except Exception as e:
+            print(f"[Brain] Local LLM registration notice: {e}")
+
         if self.providers:
             self.client = self.providers[0]["client"]
             self.provider = self.providers[0]["provider"]
@@ -1354,11 +1368,29 @@ class JarvisBrain:
             load_dotenv(override=True)
             self._configure_client()
 
+        # Phase 11: Network & Hybrid Mode Handling
+        from backend.network.connectivity import get_network_mode, is_internet_available, NetworkMode
+        from backend.agent.offline_fallback import execute_offline_system_command
+
+        net_mode = get_network_mode()
+        internet_up = is_internet_available()
+
+        # If offline-only mode is forced or internet is disconnected:
+        if net_mode == NetworkMode.OFFLINE_ONLY or not internet_up:
+            local_prov = next((p for p in self.providers if p.get("is_local") or p["provider"].startswith("local_")), None)
+            if not local_prov:
+                return execute_offline_system_command(message, response_language=response_language)
+
         if not self.client:
+            # Check if offline system command can handle it before requiring API key
+            offline_cmd_res = execute_offline_system_command(message, response_language=response_language)
+            if offline_cmd_res.get("status") in ("success", "pending_confirmation"):
+                return offline_cmd_res
+
             return {
                 "response": (
                     "Hello! I am JARVIS. My core framework is online. "
-                    "To enable AI responses, please add an API key in your `.env` file."
+                    "To enable AI responses, please add an API key in your `.env` file or start local Ollama."
                 ),
                 "status": "config_required",
                 "model": "none",
@@ -1751,6 +1783,15 @@ class JarvisBrain:
                 "suggestions": ["30 second baad dobara try karo", "Git status check karo"]
             }
         
+        # Phase 11: Attempt deterministic offline system fallback before reporting error
+        try:
+            from backend.agent.offline_fallback import execute_offline_system_command
+            offline_fallback_res = execute_offline_system_command(message, response_language=response_language)
+            if offline_fallback_res.get("status") in ("success", "pending_confirmation"):
+                return offline_fallback_res
+        except Exception:
+            pass
+
         return {
             "response": f"An error occurred while contacting AI brain ({self.provider}): {last_error}",
             "status": "error",

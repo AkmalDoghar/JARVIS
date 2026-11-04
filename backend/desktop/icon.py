@@ -82,3 +82,4 @@ def get_icon_path() -> str:
 if __name__ == "__main__":
     path = generate_arc_reactor_icon()
     print(f"Arc Reactor Icon created at: {path}")
+

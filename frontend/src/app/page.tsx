@@ -41,6 +41,19 @@ interface BrowserSpeechRecognizer {
   stop: () => void;
 }
 
+export interface NetworkInfo {
+  is_online: boolean;
+  latency_ms: number;
+  mode: "auto" | "cloud_only" | "offline_only";
+  status: string;
+  effective_engine: string;
+  local_llm?: {
+    available: boolean;
+    provider?: string;
+    active_model?: string;
+  };
+}
+
 export function cleanTextForSpeech(text: string): string {
   if (!text) return "";
   let cleaned = text.replace(/```[\s\S]*?```/g, "Code screen par display kar diya hai.");
@@ -82,6 +95,8 @@ export default function Dashboard() {
     spokenText?: string;
     time: string;
     suggestions?: string[];
+    provider?: string;
+    offline_mode?: boolean;
   }[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -93,6 +108,48 @@ export default function Dashboard() {
   const [selectedLanguage, setSelectedLanguage] = useState<"ur" | "en" | "hi" | "auto">("ur");
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  // Phase 11: Real-time Network & Hybrid Mode State
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
+
+  const fetchNetworkStatus = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/network/status");
+      if (res.ok) {
+        const data = await res.json();
+        setNetworkInfo(data);
+      }
+    } catch {
+      setNetworkInfo({
+        is_online: false,
+        latency_ms: 0,
+        mode: "offline_only",
+        status: "offline_disconnected",
+        effective_engine: "offline_deterministic"
+      });
+    }
+  };
+
+  const toggleNetworkMode = async () => {
+    const nextMode = networkInfo?.mode === "offline_only" ? "auto" : "offline_only";
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/network/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: nextMode })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.network_status) {
+          setNetworkInfo(data.network_status);
+        }
+        setVoiceNotice(nextMode === "offline_only" ? "⚡ Offline Mode Activated (Local System Engine)" : "🟢 Auto Hybrid Network Mode Restored");
+        setTimeout(() => setVoiceNotice(null), 3500);
+      }
+    } catch (e) {
+      console.error("Network mode toggle error", e);
+    }
+  };
 
   // Synchronized Engine Refs (prevents state-closure race conditions in async voice recognizers)
   const isListeningRef = useRef(false);
@@ -1069,7 +1126,9 @@ export default function Dashboard() {
         text: reply, 
         spokenText: spoken,
         suggestions: data.suggestions || [],
-        time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) 
+        time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        provider: data.provider,
+        offline_mode: Boolean(data.offline_mode)
       }]);
       await speakResponse(spoken);
     } catch (err: unknown) {
@@ -1187,6 +1246,18 @@ export default function Dashboard() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Phase 11: Real-time Network Telemetry Polling (every 10s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchNetworkStatus();
+    }, 100);
+    const interval = setInterval(fetchNetworkStatus, 10000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Initialize Background Wake Word on load + Microphone permission unlock
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1257,7 +1328,6 @@ export default function Dashboard() {
               title="Hands-free Wake Word Detection (Hey JARVIS / Suno JARVIS)"
             >
               <Radio size={12} className={isWakeWordEnabled ? "text-cyan-400 animate-pulse" : "text-slate-500"} />
-              <span className="text-[11px]">Wake</span>
             </button>
 
             {/* Continuous Open Mic Toggle */}
@@ -1271,7 +1341,6 @@ export default function Dashboard() {
               title="Continuous Open Mic Mode"
             >
               <Mic size={12} className={isContinuousConversation ? "text-emerald-400 animate-pulse" : "text-slate-500"} />
-              <span className="text-[11px]">Open Mic</span>
             </button>
 
             {/* Mute/Unmute Audio Voice */}
@@ -1314,6 +1383,40 @@ export default function Dashboard() {
               <Zap size={10} className="text-cyan-400 animate-pulse" />
               <span>Ctrl+Space</span>
             </div>
+
+            <div className="w-[1px] h-3.5 bg-cyan-500/20 mx-1 hidden lg:block" />
+
+            {/* Phase 11: Network & Hybrid Mode Pill */}
+            <button
+              onClick={toggleNetworkMode}
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono border transition-all cursor-pointer ${
+                networkInfo?.mode === "offline_only" || !networkInfo?.is_online
+                  ? "bg-amber-950/40 border-amber-500/40 text-amber-300 hover:border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                  : networkInfo?.local_llm?.available
+                  ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:border-emerald-400"
+                  : "bg-cyan-950/40 border-cyan-500/30 text-cyan-300 hover:border-cyan-400"
+              }`}
+              title={`Network Engine: ${networkInfo?.effective_engine || 'auto'}. Click to toggle Cloud / Offline Mode.`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  networkInfo?.mode === "offline_only" || !networkInfo?.is_online
+                    ? "bg-amber-400 animate-pulse shadow-[0_0_6px_#f59e0b]"
+                    : networkInfo?.local_llm?.available
+                    ? "bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]"
+                    : "bg-cyan-400 animate-pulse shadow-[0_0_6px_#06b6d4]"
+                }`}
+              />
+              <span>
+                {networkInfo?.mode === "offline_only"
+                  ? "OFFLINE"
+                  : !networkInfo?.is_online
+                  ? "DISCONNECTED"
+                  : networkInfo?.local_llm?.available
+                  ? "LOCAL OLLAMA"
+                  : `ONLINE ${networkInfo?.latency_ms ? `${Math.round(networkInfo.latency_ms)}ms` : ""}`}
+              </span>
+            </button>
           </div>
 
           {/* Right: Unified System Vitals Capsule, Clock & Date Stack, Minimal Creator Profile */}
@@ -1675,9 +1778,16 @@ export default function Dashboard() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-4 mb-1.5 pb-1.5 border-b border-white/10 text-[9px] font-mono opacity-85">
-                          <span className="font-bold uppercase tracking-wider text-cyan-300">
-                            {msg.sender === "user" ? "AK" : "JARVIS"}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold uppercase tracking-wider text-cyan-300">
+                              {msg.sender === "user" ? "AK" : "JARVIS"}
+                            </span>
+                            {msg.offline_mode && (
+                              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                OFFLINE
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <span>{msg.time}</span>
                             <button

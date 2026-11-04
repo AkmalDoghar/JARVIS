@@ -28,6 +28,8 @@ class TestPhase7DesktopVision(unittest.TestCase):
     def test_01_screen_capture_in_memory(self):
         """Test on-demand desktop screenshot capture in memory."""
         res = vision_tools.capture_desktop_screenshot(save_path=None)
+        if not res.get("success") and "display session" in str(res.get("error")):
+            self.skipTest("Display session is detached or screen is locked. Skipping live screen capture test.")
         self.assertTrue(res.get("success"), f"Capture failed: {res.get('error')}")
         self.assertIn("base64_image", res)
         self.assertGreater(len(res["base64_image"]), 1000, "Base64 image payload is too small.")
@@ -45,6 +47,8 @@ class TestPhase7DesktopVision(unittest.TestCase):
             test_file.unlink()
 
         res = vision_tools.capture_desktop_screenshot(save_path=str(test_file))
+        if not res.get("success") and "display session" in str(res.get("error")):
+            self.skipTest("Display session is detached or screen is locked. Skipping live screen capture test.")
         self.assertTrue(res.get("success"))
         self.assertTrue(test_file.exists(), "Explicitly requested screenshot file was not created on disk.")
         self.assertGreater(test_file.stat().st_size, 1000)
@@ -89,9 +93,11 @@ class TestPhase7DesktopVision(unittest.TestCase):
 
     def test_07_offline_graceful_handling(self):
         """Verify that inspect_screen handles offline or model failure gracefully without crashing."""
-        # Temporarily mock get_vision_llm_client to simulate offline
+        # Temporarily mock get_vision_llm_client and capture_desktop_screenshot to isolate offline LLM logic
         orig_func = vision_tools.get_vision_llm_client
+        orig_capture = vision_tools.capture_desktop_screenshot
         vision_tools.get_vision_llm_client = lambda: (None, "offline", [])
+        vision_tools.capture_desktop_screenshot = lambda **kw: {"success": True, "base64_image": "bW9ja19pbWFnZQ==", "width": 800, "height": 600}
 
         try:
             res = vision_tools.inspect_screen(focus="error")
@@ -101,6 +107,7 @@ class TestPhase7DesktopVision(unittest.TestCase):
             self.assertIn("spoken_response", res)
         finally:
             vision_tools.get_vision_llm_client = orig_func
+            vision_tools.capture_desktop_screenshot = orig_capture
 
         print("[SUCCESS] Test 7: Graceful offline fallback validated.")
 

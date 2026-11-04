@@ -15,9 +15,48 @@ def is_available() -> bool:
     return find_spec("pyaudio") is not None and find_spec("speech_recognition") is not None
 
 
+def transcribe_offline(recognizer: "sr.Recognizer", audio: "sr.AudioData", language: str = "en-US") -> str:
+    """
+    Offline speech-to-text fallback engine.
+    Probes locally installed offline speech decoders:
+    faster-whisper, whisper, vosk, sphinx.
+    """
+    # 1. Faster-Whisper (Highest accuracy local engine)
+    try:
+        if hasattr(recognizer, "recognize_faster_whisper"):
+            lang_code = "ur" if ("ur" in language.lower() or "pk" in language.lower()) else "en"
+            return recognizer.recognize_faster_whisper(audio, language=lang_code)
+    except Exception:
+        pass
+
+    # 2. OpenAI Whisper local
+    try:
+        if hasattr(recognizer, "recognize_whisper"):
+            return recognizer.recognize_whisper(audio, model="base")
+    except Exception:
+        pass
+
+    # 3. Vosk offline
+    try:
+        if hasattr(recognizer, "recognize_vosk"):
+            return recognizer.recognize_vosk(audio)
+    except Exception:
+        pass
+
+    # 4. CMU Sphinx
+    try:
+        if hasattr(recognizer, "recognize_sphinx"):
+            return recognizer.recognize_sphinx(audio)
+    except Exception:
+        pass
+
+    raise RuntimeError("Cloud speech recognition unreachable (offline) and no local STT engine (faster-whisper/vosk) is installed.")
+
+
 def listen(timeout: int = 6, language: str = "en-US", verify_biometrics: bool = False) -> str:
     """
     Listen to user speech from microphone and transcribe to text with fast response.
+    Supports automatic offline fallback if cloud recognition is unreachable.
     """
     import speech_recognition as sr
 
@@ -46,8 +85,14 @@ def listen(timeout: int = 6, language: str = "en-US", verify_biometrics: bool = 
         except Exception:
             pass
 
-    # 2. Transcribe speech
-    raw_text = recognizer.recognize_google(audio, language=language)
+    # 2. Transcribe speech with automatic offline fallback
+    try:
+        raw_text = recognizer.recognize_google(audio, language=language)
+    except (sr.RequestError, Exception) as cloud_err:
+        try:
+            raw_text = transcribe_offline(recognizer, audio, language=language)
+        except Exception:
+            raise cloud_err
 
     # 3. If Urdu script returned, normalize to Roman Urdu for seamless intent matching
     try:
