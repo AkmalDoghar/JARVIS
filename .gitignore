@@ -3,3 +3,23 @@ __pycache__/
 *.pyc
 .env
 .vscode/
+
+# Logs & temporary runtimes
+backend/logs/
+*.log
+@AutomationLog.txt
+
+# Databases & local media cache
+backend/database/*.db
+backend/database/media_cache/
+backend/database/test_status.png
+*.mp3
+*.wav
+
+# Frontend build & packages
+node_modules/
+frontend/node_modules/
+frontend/.next/
+.next/
+restored_page.tsx
+

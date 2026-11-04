@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "keywords": [
+    "hey jarvis",
+    "jarvis",
+    "suno jarvis",
+    "hello jarvis",
+    "jarvis suno",
+    "oye jarvis",
+    "ok jarvis"
+  ],
+  "chime": true,
+  "sensitivity": "high",
+  "auto_execute": true
+}

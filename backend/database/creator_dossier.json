@@ -1,0 +1,98 @@
+{
+  "personal": {
+    "name": "Muhammad Akmal",
+    "preferred_name": "Akmal bhai",
+    "title": "Full Stack Developer & AI Engineer",
+    "bio": "I'm Muhammad Akmal, Creator and Master Architect of JARVIS AI Assistant System and full-stack JavaScript engineer who builds web applications from the ground up — database schema design, RESTful APIs, server-side logic, and responsive user interfaces.\n\nPrimary focus on Next.js, React, Node.js, and MongoDB. I emphasize clean code, structured commit histories, clear documentation, and seamless deployments.",
+    "location": "Faisalabad, Pakistan",
+    "email": "",
+    "phone": "",
+    "avatar_url": "https://github.com/AkmalDoghar.png"
+  },
+  "social_profiles": {
+    "github": "https://github.com/AkmakDoghar",
+    "github_username": "AkmakDoghar",
+    "linkedin": "linkedin.com/in/muhammad-akmal-dev/",
+    "portfolio": "https://akmalcode.vercel.app",
+    "twitter": "",
+    "youtube": "",
+    "instagram": ""
+  },
+  "tech_stack": [
+    "Python",
+    "FastAPI",
+    "Next.js",
+    "React",
+    "TypeScript",
+    "Tailwind CSS",
+    "AI/LLMs",
+    "Node.js",
+    "Git"
+  ],
+  "coding_preferences": "Clean modular architecture, TypeScript strict, functional components, fast responsive UI, secure code",
+  "projects": [
+    {
+      "name": "JARVIS AI Assistant",
+      "role": "Lead Architect & Creator",
+      "description": "Next-generation personal AI agent for Windows with voice biometrics, system automation, and web intelligence."
+    }
+  ],
+  "career_summary": "Full Stack Developer & AI Engineer with expertise in building real-time autonomous agent systems, full-stack web applications, and intelligent developer tooling.",
+  "online_synced_data": {
+    "last_synced": "2026-10-17 11:31:01",
+    "github_handle": "torvalds",
+    "github_bio": "",
+    "public_repos_count": 12,
+    "followers": 328068,
+    "recent_repos": [
+      {
+        "name": "linux",
+        "description": "Linux kernel source tree",
+        "language": "C",
+        "stars": 252198,
+        "html_url": "https://github.com/torvalds/linux"
+      },
+      {
+        "name": "AudioNoise",
+        "description": "Random digital audio effects",
+        "language": "C",
+        "stars": 4514,
+        "html_url": "https://github.com/torvalds/AudioNoise"
+      },
+      {
+        "name": "ScrollWheel",
+        "description": "Minimalist RP2350 magnetic sensor scroll wheel toy project",
+        "language": "C",
+        "stars": 382,
+        "html_url": "https://github.com/torvalds/ScrollWheel"
+      },
+      {
+        "name": "GuitarPedal",
+        "description": "Linus learns analog circuits",
+        "language": "C",
+        "stars": 2459,
+        "html_url": "https://github.com/torvalds/GuitarPedal"
+      },
+      {
+        "name": "uemacs",
+        "description": "Random version of microemacs with my private modificatons",
+        "language": "C",
+        "stars": 2168,
+        "html_url": "https://github.com/torvalds/uemacs"
+      },
+      {
+        "name": "1590A",
+        "description": "Random odd guitar pedal design in kicad",
+        "language": "OpenSCAD",
+        "stars": 579,
+        "html_url": "https://github.com/torvalds/1590A"
+      }
+    ],
+    "online_summary": "GitHub @torvalds synced: 12 public repos, 328068 followers."
+  },
+  "ai_interaction_rules": {
+    "honorific": "Akmal bhai",
+    "tone": "Respectful, sharp, loyal, concise and proactive Roman Urdu",
+    "creator_authority": "Supreme authority - all high-risk actions authenticated exclusively for Akmal bhai."
+  }
+}

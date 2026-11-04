@@ -1,0 +1,1718 @@
+JARVIS AI ASSISTANT
+
+PROJECT DOCUMENTATION - FINAL MASTER FILE
+Version: 2.0 (FINAL)
+Last updated: 09 October 2026
+Previous versions: 1.0 (07 Oct 2026), 1.1 (09 Oct 2026)
+
+This is the single master document. It replaces all earlier versions.
+
+======================================================================
+TABLE OF CONTENTS
+======================================================================
+
+ 1. Project Overview
+ 2. Final Vision
+ 3. Development Environment
+ 4. Technology Stack
+ 5. Project Structure
+ 6. Core System Components
+ 7. Security Model
+ 8. How to Run and Use JARVIS
+ 9. Power Control and Waking the PC
+10. Offline and Hybrid Mode
+11. Development Phases (0 to 11)
+12. Example Final Commands
+13. Project Rules
+14. Environment Variables
+15. Logging Policy
+16. Testing Strategy
+17. Cost Control
+18. Performance Targets
+19. Backup, Updates and Packaging
+20. Privacy Dashboard
+21. Risks and Mitigations
+22. Future Features
+23. Hardware Plan
+24. Current Status
+25. First Milestone
+26. Definition of Done
+27. Project Philosophy
+28. Quick Roadmap
+29. Important Note
+30. Changelog
+
+======================================================================
+
+1. PROJECT OVERVIEW
+
+Project Name: JARVIS
+
+Goal: Build a personal AI assistant for Windows that can understand
+natural language and voice commands, answer questions, use the internet,
+control the computer, work with files and code, understand the screen,
+remember useful information, and perform multi-step tasks safely. It
+should keep working (with reduced abilities) when the internet is not
+available.
+
+This project is inspired by the concept of Iron Man's JARVIS, but the
+implementation will be a practical personal AI agent rather than a
+fictional system.
+
+IMPORTANT: We will build JARVIS in phases. We will NOT try to build
+every feature at once.
+
+Realistic expectations:
+- JARVIS is software running inside the PC. When the PC is fully off,
+  JARVIS is off (see Section 9).
+- In online mode JARVIS depends on an internet connection and an AI API.
+- In offline mode JARVIS uses smaller local models: it is slower and
+  less capable, especially in Urdu and for complex tasks (Section 10).
+- AI answers can be wrong; important actions need confirmation.
+- Cloud AI has an ongoing usage cost (Section 17).
+- The result is a capable personal agent, not a movie-style AI.
+
+2. FINAL VISION
+
+The long-term JARVIS workflow:
+
+    USER
+      |
+      v
+    Microphone / Text / Hotkey
+      |
+      v
+    Speech-to-Text (online or local)
+      |
+      v
+    AI BRAIN (cloud model or local model)
+      |
+      v
+    SECURITY LAYER (risk check + confirmation + PIN)
+      |
+      +-------------------+
+      |        |          |
+      v        v          v
+    PC      Browser     Files/Code
+    Tools     Tools       Tools
+      |        |          |
+      +--------+----------+
+               |
+               v
+          Action/Result (logged)
+               |
+               v
+        Text-to-Speech (local voice)
+               |
+               v
+            USER
+
+JARVIS should eventually be able to:
+- Talk with the user
+- Listen to voice commands
+- Answer questions
+- Search the web (online mode)
+- Open and control applications
+- Work with files and folders
+- Read and modify code
+- Run approved terminal commands
+- Understand screenshots/screen content
+- Remember useful preferences and context
+- Perform multi-step tasks
+- Set timers, alarms and reminders
+- Control volume, media and windows
+- Lock, sleep, restart and shut down the PC (with confirmation)
+- Ask for confirmation before sensitive actions
+- Work offline with local models (reduced capability)
+- Provide a futuristic desktop dashboard
+- Operate reliably and safely
+
+3. DEVELOPMENT ENVIRONMENT
+
+Operating System: Windows 11
+
+Development Editor: Visual Studio Code
+
+Verified tools:
+- Git 2.51.0.windows.1
+- Node.js v20.19.5
+- npm 10.8.2
+- Python 3.11
+
+Verification commands (re-run if the environment changes):
+
+    python --version
+    pip --version
+    node --version
+    npm --version
+    git --version
+
+IMPORTANT: Do not install random packages. Every new dependency must be
+justified by the current phase (Rule 2) and added to requirements.txt
+(backend) or package.json (frontend).
+
+4. TECHNOLOGY STACK
+
+Frontend:
+- Next.js
+- React
+- Tailwind CSS
+- Framer Motion
+- All fonts, icons and assets bundled locally (no CDN) so the dashboard
+  loads without internet.
+
+Backend / Agent:
+- Python 3.11
+- FastAPI
+- OpenAI-compatible client (works with OpenRouter in the cloud and with
+  a local server such as Ollama in offline mode)
+
+AI - cloud (online mode):
+- OpenRouter as the model gateway
+- Free-model fallback chain (continues after a rate-limit response)
+- Tool/function calling (from Phase 3)
+- Web search (Phase 5)
+
+AI - local (offline mode, Phase 11):
+- Ollama (or llama.cpp) running small local models
+- Model sizes chosen to fit the hardware (Section 23)
+
+The "model provider" is an interface: cloud and local models plug into
+the same interface. All model calls stay inside backend/agent/brain.py
+(and its provider files) so switching provider never touches other code.
+
+Voice - current:
+- Speech-to-Text: browser SpeechRecognition (Chrome/Edge). NOTE: this is
+  an ONLINE service and does NOT work offline.
+- Text-to-Speech: device-installed system voices (works offline).
+
+Voice - planned:
+- Local Speech-to-Text (for example faster-whisper or whisper.cpp). This
+  solves two problems at once: unreliable browser recognition and
+  offline use. Preferred long-term choice (decision in Phase 2C).
+- Optional cloud STT (for example the Whisper API) as an online option.
+- Optional better local TTS (for example Piper) if system voices are not
+  good enough.
+
+Computer Control:
+- Python
+- PowerShell
+- PyAutoGUI (only if really needed)
+- Windows APIs where appropriate
+
+Browser Automation:
+- Playwright (online features)
+
+Database:
+- Initial: SQLite (local file, works offline)
+- Later, if needed: PostgreSQL + vector database / embeddings
+
+Testing:
+- pytest (backend)
+- Frontend: lint + type-check + manual UI checklist
+
+Version Control:
+- Git
+- GitHub (private repository recommended)
+
+5. PROJECT STRUCTURE
+
+Status key: [exists] = built, [planned] = not built yet. Verify against
+the real folder before each phase and update this list.
+
+JARVIS/
+|
++-- frontend/                 [exists] Next.js dashboard
+|   +-- app/
+|   +-- components/
+|   +-- public/               fonts/icons bundled here (offline-safe)
+|   +-- styles/
+|
++-- backend/                  [exists] FastAPI
+|   +-- main.py               [exists] API + health endpoint
+|   |
+|   +-- agent/
+|   |   +-- brain.py          [exists] model calls, fallback chain
+|   |   +-- providers/        [planned] cloud + local model providers
+|   |   +-- planner.py        [planned] Phase 8
+|   |   +-- memory.py         [planned] Phase 6
+|   |   +-- executor.py       [planned] Phase 3
+|   |
+|   +-- voice/                [planned] needed when local/backend STT is
+|   |   +-- speech_to_text.py   added (Phase 2C). Today voice runs in
+|   |   +-- text_to_speech.py   the browser.
+|   |
+|   +-- tools/                [planned] Phases 3-5
+|   |   +-- system.py         apps, power, volume, windows
+|   |   +-- browser.py
+|   |   +-- files.py
+|   |   +-- coding.py
+|   |   +-- web.py
+|   |   +-- utilities.py      calculator, time, timers, reminders
+|   |
+|   +-- security/             [planned] Phase 3 (built BEFORE any tool)
+|   |   +-- permissions.py    risk levels, allowlists, path rules
+|   |   +-- confirmations.py  confirmation request/response flow
+|   |   +-- pin.py            PIN/passphrase for sensitive actions
+|   |   +-- audit.py          append-only action log
+|   |
+|   +-- network/              [planned] Phase 11
+|   |   +-- connectivity.py   online/offline detection
+|   |
+|   +-- database/             [planned] Phase 6 (earlier if needed)
+|       +-- database.py
+|       +-- models.py
+|
++-- models/                   [planned] local model files (git-ignored)
++-- backups/                  [planned] git-ignored
++-- tests/                    [planned] grows with every phase
++-- logs/                     [planned] git-ignored
++-- .env                      [exists] never committed
++-- .env.example              [planned] keys with empty values, committed
++-- .gitignore                [exists]
++-- requirements.txt
++-- README.md
++-- start_jarvis.bat          [verify] starts backend + frontend, opens
+|                             the dashboard in the browser
++-- stop_jarvis.bat           [planned] stops backend + frontend cleanly
+
+6. CORE SYSTEM COMPONENTS
+
+6.1 AI BRAIN
+
+Responsible for:
+- Understanding user requests
+- Reasoning about tasks
+- Selecting tools
+- Producing responses
+- Coordinating multi-step tasks
+
+The AI brain is the central decision-making layer.
+
+It must NOT directly have unlimited system access. It requests actions
+through controlled tools, and every tool call passes through the
+security layer first.
+
+6.2 MODEL STRATEGY
+
+Free cloud models are acceptable for plain chat (Phases 1-2). They are
+rate-limited and often unreliable at tool/function calling.
+
+Rules:
+- From Phase 3 onward, the model used for tool calling must be tested
+  for reliable function calling BEFORE it is adopted.
+- Keep a configurable model list in .env (primary + fallbacks) so models
+  can be changed without code edits.
+- Separate "chat model" from "tool-calling model" if needed.
+- Log which model handled each request (without logging secrets).
+- Vision (Phase 7) requires a vision-capable model; choose it then.
+- Local models (Phase 11) are tested separately; if a local model cannot
+  call tools reliably, offline mode limits itself to safe built-in
+  commands (Section 10).
+
+6.3 VOICE INPUT
+
+Purpose: Convert the user's speech into text.
+
+Example:
+
+User says: "Jarvis, open Visual Studio Code."
+
+Voice: -> Speech-to-Text -> "Jarvis, open Visual Studio Code."
+
+Current behavior: recognized text appears in the editable message box so
+the user can review it before sending. Language is selectable (English,
+Urdu, Hindi).
+
+Known limitation: browser recognition depends on the browser's online
+recognition service and a working network, and quality for Urdu varies.
+Roman Urdu (Urdu written in English letters) is NOT a recognition
+language: the user can speak Urdu or Hindi, or type Roman Urdu, and the
+AI can be told to reply in Roman Urdu.
+
+Barge-in: if the user starts speaking (or presses the mic/hotkey) while
+JARVIS is talking, JARVIS stops speaking immediately.
+
+6.4 VOICE OUTPUT
+
+Purpose: Convert JARVIS responses into speech.
+
+Current behavior: uses device-installed system voices (works offline),
+with voice selection, preview and a saved preference. It does not
+generate or clone voices. A voice toggle must be able to fully suppress
+playback.
+
+Example:
+
+AI response: "Certainly. Opening Visual Studio Code."
+
+    -> Text-to-Speech
+    -> Speaker
+
+6.5 TOOL SYSTEM
+
+JARVIS will have controlled tools. Every tool must define:
+- name and purpose
+- input schema (validated)
+- risk level (LOW / MEDIUM / HIGH)
+- whether it works offline (YES / NO)
+- what it logs
+- a test
+
+Examples:
+
+System: open_app(), close_app(), get_system_status(), volume_control(),
+lock_pc(), sleep_pc(), restart_pc(), shutdown_pc()
+
+Window/clipboard: list_windows(), focus_window(), minimize/maximize,
+read_clipboard(), write_clipboard()
+
+Media: play/pause, next/previous, mute
+
+Files: read_file(), create_file(), write_file(), create_folder(),
+list_directory()
+
+Browser: open_url(), search_web(), navigate()
+
+Coding: inspect_project(), run_command(), run_tests(), git_status()
+
+Utilities: calculator(), time(), weather(), set_timer(), set_alarm(),
+set_reminder()
+
+6.6 MEMORY
+
+Memory allows JARVIS to remember useful information.
+
+Examples:
+- Preferred applications
+- Frequently used project folders
+- User instructions
+- Important non-sensitive preferences
+- Useful conversation context
+
+Initial implementation: SQLite (local, works offline).
+
+Future: PostgreSQL + vector/semantic memory if required.
+
+Memory rules:
+- Only save what the user explicitly asks to remember, or clearly
+  non-sensitive preferences after the user approves.
+- Never store passwords, API keys, banking details, OTP codes or
+  similar secrets.
+- The user can list, edit and delete every memory.
+- A "forget everything" option must exist.
+
+6.7 VISION
+
+JARVIS will eventually be able to inspect screenshots or supported
+visual input.
+
+Example:
+
+User: "Jarvis, what's wrong on my screen?"
+
+Process:
+1. Capture/receive screen image
+2. Send image to a vision-capable AI
+3. Analyze UI/error
+4. Explain problem
+5. Suggest or perform approved action
+
+Privacy rule: screenshots are captured only on user request, never
+continuously, and are not stored unless the user chooses to save them.
+
+Vision needs a vision-capable model. Offline vision requires a local
+vision model and strong hardware; it is optional and NOT required for
+offline mode.
+
+6.8 WEB ACCESS
+
+JARVIS should eventually be able to:
+- Search the web
+- Find current information
+- Read relevant pages
+- Summarize results
+- Answer questions using current information
+
+For time-sensitive questions, current web information should be
+preferred over old memory. Answers should show their sources. Web
+access is an online-only feature.
+
+6.9 CONVERSATION STORAGE
+
+Decision: conversation history is kept in the current session by
+default. Persistent history (SQLite) is added in Phase 6 together with
+memory, with a clear-history option. Until then, nothing is saved to
+disk except user settings (such as the selected voice and language).
+
+6.10 LANGUAGE SUPPORT
+
+Done: English, Urdu and Hindi for speech recognition and for AI
+response language.
+
+Planned: Roman Urdu replies (AI language option) and typed Roman Urdu
+understanding. Speech recognition in Roman Urdu is not available and is
+not planned.
+
+Offline note: small local models and local STT are weaker in Urdu than
+in English. Offline accuracy for Urdu/Hindi must be measured and
+recorded (Phase 11).
+
+6.11 NO-INTERNET BEHAVIOR
+
+JARVIS must never crash or hang when the internet drops.
+- It detects the loss of connection (Phase 11 formalizes this; until
+  then it shows a clear error message).
+- It tells the user plainly: "No internet. I can still do local tasks."
+- Local-only tools keep working (open apps, folders, system status,
+  volume, timers, power control, file reading, calculator, time).
+- Online-only tools (web search, weather, cloud AI) say they are
+  unavailable instead of failing silently.
+- When the connection returns, JARVIS switches back automatically (or
+  asks, depending on the setting).
+
+6.12 TIMERS, ALARMS AND REMINDERS
+
+- set_timer("10 minutes"), set_alarm("7:00"), set_reminder("call
+  Ahmed at 5 pm").
+- Stored locally (SQLite) so they survive restart. They work offline.
+- When one fires: dashboard notification + spoken message + Windows
+  notification.
+- Limits: reminders only fire while JARVIS is running; if the PC is off
+  or asleep they fire late when the PC wakes (they are not a substitute
+  for a phone alarm). For wake-up alarms use the Windows Clock app or a
+  phone.
+
+7. SECURITY MODEL
+
+Security is a major part of the project and is built BEFORE any tool
+that can change the computer (Phase 3, step 3A).
+
+JARVIS will NOT be given unrestricted permission to do anything
+silently.
+
+Actions are categorized.
+
+LOW RISK:
+- Open an application
+- Search the web
+- Read a non-sensitive file
+- Check system status
+- Change volume, set a timer
+
+These can normally execute automatically.
+
+MEDIUM RISK:
+- Modify project files
+- Install packages
+- Run development commands
+- Lock the PC, put it to sleep
+- Close applications
+
+Depending on the action, JARVIS may execute or request confirmation.
+Default: ask for confirmation unless the user has allowed it for that
+project or action.
+
+HIGH RISK:
+- Delete important files
+- Delete folders
+- Shut down or restart the PC
+- Send emails/messages
+- Change important system settings
+- Execute potentially destructive commands
+- Perform financial or account actions
+
+These always require explicit confirmation.
+
+Example:
+
+JARVIS: "This action will permanently delete the selected folder.
+Continue?"
+
+User: "Yes."
+
+Only then should the action execute.
+
+PIN / PASSPHRASE FOR SENSITIVE ACTIONS
+
+Problem: a voice "yes" can be said by anyone near the microphone (or
+heard from a video/TV). So for HIGH risk actions a voice "yes" alone is
+not enough.
+
+Rule:
+- HIGH risk actions require a PIN or passphrase, typed in the dashboard
+  (or a click on the confirmation dialog while the dashboard is
+  focused).
+- The PIN is stored only as a salted hash, never as plain text.
+- After several wrong attempts JARVIS locks sensitive actions for a
+  period of time and logs the attempts.
+- The user can choose which actions need the PIN (default: all HIGH).
+
+Technical safeguards (to implement in Phase 3A):
+1. Allowlist: tools can only run actions from an approved list; unknown
+   commands are refused.
+2. Path rules: file tools can only touch approved folders; system
+   folders (Windows, Program Files) are blocked.
+3. Command rules: no raw shell by default; destructive patterns (for
+   example recursive delete, format, registry edits) are blocked or
+   forced to HIGH risk.
+4. Confirmation flow: the confirmation request shows exactly what will
+   happen; confirmations expire after a short time; a confirmation
+   applies to ONE action only.
+5. Prompt-injection defense: text from web pages, files or screenshots
+   is treated as data, never as instructions. It can never approve an
+   action or change security rules.
+6. Audit log: every tool call (time, tool, arguments summary, risk
+   level, confirmed or not, result) is written to the log.
+7. Emergency stop: a visible STOP control cancels the running task.
+8. Rate/step limits: a maximum number of tool calls per task, to prevent
+   runaway loops.
+9. Local-only server: the backend listens ONLY on 127.0.0.1 (this
+   computer), never on the network, and accepts requests only from the
+   JARVIS dashboard (CORS restricted). Nobody else on the Wi-Fi can
+   talk to it. Any future remote access (Section 22) needs its own
+   authentication design first.
+10. Single instance: only one JARVIS backend can run at a time.
+
+8. HOW TO RUN AND USE JARVIS
+
+8.1 Daily use (current and until Phase 10)
+
+1. Double-click start_jarvis.bat.
+   - It starts the backend, starts the frontend and opens the dashboard
+     in the browser (for example http://localhost:3000).
+2. Wait for the dashboard to show "Backend: online" and the model name.
+3. Type a message, or press the microphone button and speak.
+4. To stop: close the dashboard and run stop_jarvis.bat (or close the
+   console windows).
+
+8.2 Later (Phase 9 and 10)
+
+- Phase 9: decision whether JARVIS stays a browser dashboard or becomes
+  a desktop window (Tauri/Electron) with tray icon and a global hotkey
+  (for example Ctrl+Space = start listening).
+- Phase 10: "Start with Windows" option. JARVIS starts in the
+  background after you sign in; the dashboard opens from the tray icon
+  or hotkey. A wake word ("Jarvis") is optional and can be turned off.
+
+8.3 What the user sees on screen
+
+- Central JARVIS orb: idle / listening / thinking / speaking
+- Conversation (user and JARVIS)
+- Microphone indicator (clearly shows when the mic is active)
+- Online / Offline indicator and the current model name
+- CPU / RAM and backend status
+- Current task and tool activity (for example "Opening VS Code...")
+- Confirmation dialog for risky actions (with PIN field when needed)
+- STOP button to cancel the running task
+- Notifications for timers, alarms and reminders
+
+8.4 Limitation of the browser microphone
+
+Browser speech recognition works only while the dashboard tab/window is
+open and focused enough to listen. For "always listening" use, JARVIS
+needs the desktop app (Phase 9) and/or backend speech-to-text (Phase 2C
+and Phase 10 wake word).
+
+8.5 Troubleshooting (keep this list updated)
+
+- Dashboard says "Backend offline": start_jarvis.bat did not start the
+  backend. Check the backend console window for errors; check that the
+  .env file exists and the virtual environment is active.
+- Port already in use: another copy of JARVIS is running. Run
+  stop_jarvis.bat, then start again.
+- No voice reply: check the voice toggle, the selected voice, and the
+  Windows volume.
+- Microphone not working: allow microphone permission in the browser;
+  check the Windows privacy settings for the microphone; test in
+  Chrome/Edge (not an embedded preview browser).
+- Recognition network error: browser recognition needs internet. Wait
+  for the connection, or use local speech-to-text once it is added.
+- Model rate limit: JARVIS falls back to the next model; if all are
+  limited, wait and retry or choose another model.
+- Offline and nothing answers: local models are not set up yet
+  (Phase 11), so AI chat needs internet until then.
+
+9. POWER CONTROL AND WAKING THE PC
+
+9.1 Turning the PC off, restarting, sleeping, locking
+
+JARVIS can do this through power tools (Phase 3):
+- lock_pc()        MEDIUM risk
+- sleep_pc()       MEDIUM risk
+- restart_pc()     HIGH risk (confirmation + PIN)
+- shutdown_pc()    HIGH risk (confirmation + PIN)
+
+Before shutdown or restart JARVIS warns: "Unsaved work may be lost.
+Continue?" and may offer a short delay with a cancel option.
+
+9.2 Turning the PC ON: what is and is not possible
+
+JARVIS is a program running inside the PC. When the PC is completely
+off (or asleep), JARVIS is not running and cannot listen, so JARVIS
+CANNOT turn the PC on by itself. "Jarvis, wake up" cannot power on a
+switched-off computer.
+
+Real ways to turn the PC on:
+1. Power button (simplest, most reliable).
+2. Scheduled wake: Windows Task Scheduler (wake from sleep/hibernate)
+   or the BIOS/UEFI "RTC alarm / power on by alarm" setting (for
+   example every day at 8:00).
+3. Wake-on-LAN: send a "magic packet" from another device (phone or
+   another computer on the same network). Requires BIOS support and
+   normally a LAN cable; often does not work on Wi-Fi laptops.
+4. Mobile companion app that sends Wake-on-LAN (future, Section 22).
+
+Documented here so nobody expects JARVIS to "boot" the machine.
+
+9.3 After the PC starts
+
+If "Start with Windows" is enabled (Phase 10), JARVIS starts by itself
+after sign-in and is ready within seconds. Without it, run
+start_jarvis.bat.
+
+10. OFFLINE AND HYBRID MODE
+
+Goal: JARVIS should still be useful without internet, and should use
+the cloud only when it is available and needed.
+
+10.1 Three modes
+
+ONLINE   - cloud AI model + web search + cloud/browser speech
+           (best quality)
+OFFLINE  - local AI model + local speech-to-text + local text-to-speech
+           + local tools only
+HYBRID   - (default recommended) uses online when internet is
+           available, switches to offline automatically when it drops,
+           and switches back when it returns. The user can also force
+           ONLINE or OFFLINE in settings (for privacy or to save cost).
+
+10.2 What works offline
+
+Works offline:
+- Dashboard UI (all assets bundled locally)
+- System voices (text-to-speech)
+- Local speech-to-text (after Phase 2C/11: faster-whisper or similar)
+- Local AI chat with a small model (Ollama/llama.cpp)
+- Open/close apps, folders, files, system status
+- Volume, media, window and clipboard control
+- Power control (lock, sleep, restart, shutdown)
+- Timers, alarms, reminders
+- Calculator, time
+- Files and coding tools (read/edit files, git status, run tests)
+- Memory and conversation history (SQLite)
+- Security layer, PIN, logs, backups
+
+Does NOT work offline:
+- Web search, current news, weather
+- Cloud AI models (better reasoning and tool-calling)
+- Browser-based speech recognition
+- Playwright web automation
+- Cloud-only vision models
+- Downloading or updating models and packages
+
+10.3 Honest limitations of offline mode
+
+- Local models that run on a normal laptop (about 3B to 8B parameters)
+  are noticeably weaker than cloud models: simpler answers, more
+  mistakes, weaker Urdu/Hindi.
+- Tool calling on small local models can be unreliable. Rule: if a
+  local model fails the tool-calling tests, offline mode uses a built-in
+  "command matcher" (fixed commands such as "open Chrome", "volume
+  down", "lock the PC", "set a timer for 10 minutes") instead of letting
+  the model improvise actions. Multi-step agent tasks (Phase 8) are
+  ONLINE-ONLY unless local tests prove they are reliable.
+- Local models need disk space (several GB per model) and RAM (see
+  Section 23). First use needs a one-time download while online.
+- Local speech-to-text is slower on CPU; accuracy for Urdu must be
+  measured (tiny/base models are weak; larger models are better but
+  slower).
+- Offline responses may be slower than cloud responses.
+
+10.4 Design rules (apply from now, even before Phase 11)
+
+1. Every model/voice component is accessed through an interface
+   (provider) so cloud and local can be swapped (Section 4).
+2. Every tool declares whether it works offline.
+3. No frontend dependency on CDNs, online fonts or remote scripts.
+4. Settings and data live in local files/SQLite, never only in the
+   cloud.
+5. The online/offline state is always visible in the dashboard.
+6. Offline mode never silently sends data to the internet. If the user
+   chooses OFFLINE, no network requests to AI services are made.
+
+10.5 Offline setup (Phase 11)
+
+1. Install Ollama (or llama.cpp) while online.
+2. Download one small chat model (and later, optionally, a vision
+   model) and record its name in .env.
+3. Install local STT (for example faster-whisper) and download its
+   model.
+4. Run the offline test checklist (Phase 11) with the internet turned
+   OFF.
+
+11. DEVELOPMENT PHASES
+
+Each phase has: Goal, Tasks, Acceptance tests and Completion condition.
+A phase is finished only when ALL acceptance tests pass (Rule 6).
+
+PHASE 0 - ENVIRONMENT SETUP  (DONE)
+
+Goal: Prepare the Windows laptop for development.
+
+Tasks:
+[x] Verify Windows environment
+[x] Verify VS Code
+[x] Verify Git
+[x] Verify Node.js
+[x] Verify npm
+[x] Install Python (3.11)
+[x] Verify pip
+[x] Create project directory
+[x] Initialize Git repository
+[x] Create .gitignore
+[x] Create environment configuration (.env)
+[x] Create Python virtual environment
+[x] Install only required initial dependencies
+
+Completion condition: Development environment works correctly. (Met)
+
+PHASE 1 - JARVIS AI CORE  (DONE)
+
+Goal: Build the first working AI assistant.
+
+Features:
+- Text input
+- AI request
+- AI response
+- Basic conversation loop
+- Basic error handling
+- Health endpoint
+
+Example:
+
+User: "Hello Jarvis."
+
+JARVIS: "Hello. How can I help you?"
+
+At this stage JARVIS does NOT control the computer.
+
+Completion condition: User can communicate with the AI reliably. (Met:
+tested against the running backend.)
+
+PHASE 1.5 - EARLY FUTURISTIC DASHBOARD  (DONE)
+
+Goal: A first usable UI so every later feature can be tested visually.
+
+Delivered:
+- Next.js dashboard connected to the backend
+- Live backend/model state and conversation display
+- Device system voices with selection, preview, saved preference
+- Language selection (English, Urdu, Hindi) for recognition and replies
+- Recognized speech shown in an editable box before sending
+- Free-model fallback after rate limits
+
+Completion condition: User sends a message in the dashboard and sees the
+AI response. (Met)
+
+PHASE 2 - VOICE  (DONE)
+
+Goal: Allow natural voice interaction.
+
+2A. Browser & Backend voice (built)
+- Microphone input via browser recognition & backend STT
+- Text-to-Speech with Real Human Male voice (ElevenLabs Multilingual v2 + gTTS fallback)
+- Voice on/off toggle
+- Interactive listening, thinking, speaking states
+
+2B. End-to-end verification (VERIFIED & MET)
+Acceptance tests (LOCAL Chrome/Edge, mic permission allowed, backend running):
+[x] Microphone permission prompt appears and can be granted
+[x] English: "what is 2 plus 2" is transcribed and sent correctly
+[x] Urdu: short sentence transcribed with ur-PK engine (PASS)
+[x] Hindi: short sentence transcribed with hi-IN engine (PASS)
+[x] JARVIS reply is audible with ultra-realistic human male voice (PASS)
+[x] Voice toggle OFF stops/suppresses playback completely (PASS)
+[x] Starting a new recording while JARVIS is speaking stops the speech (barge-in) (PASS)
+[x] A recognition error shows a clear message (not a silent failure) (PASS)
+[x] Result recorded in this document: PASS across all languages
+
+2C. Decide the STT provider (if 2B fails, or Urdu accuracy is poor, or
+    offline use is wanted)
+- Compare: cloud STT (for example Whisper API) vs. local STT (for
+  example faster-whisper). Criteria: Urdu/Hindi accuracy, cost,
+  latency, privacy, offline ability, setup effort.
+- Recommendation: prefer local STT if its accuracy and speed are
+  acceptable, because it also enables offline mode.
+- Pick ONE first, add it behind the same "speech-to-text" interface so
+  the dashboard does not change, and re-run all 2B tests.
+- If a new API key is needed, add it to .env and .env.example.
+
+Example target:
+
+User: "Jarvis, what is 2 plus 2?"
+
+JARVIS: "2 plus 2 is 4."
+
+Push-to-talk (button or hotkey) is the listening mode in this phase. A
+wake word is NOT part of Phase 2 (see Phase 10).
+
+Completion condition: User can talk to JARVIS and hear the response, and
+all 2B acceptance tests pass.
+
+PHASE 3 - SECURITY FOUNDATION + COMPUTER CONTROL
+
+Goal: Give JARVIS controlled access to the Windows computer.
+
+3A. Security foundation (FIRST, before any tool)
+- Risk levels, allowlist, path rules, command rules (Section 7)
+- Confirmation flow in backend AND a confirmation dialog in dashboard
+- PIN/passphrase for HIGH risk actions
+- Backend bound to 127.0.0.1 only, CORS restricted, single instance
+- Audit log
+- Emergency STOP control
+- Tool-calling model selected and tested (Section 6.2)
+Acceptance tests:
+[ ] An unknown tool/command is refused
+[ ] A HIGH risk action cannot run without confirmation AND PIN
+[ ] Wrong PIN attempts are limited and logged
+[ ] A confirmation expires and cannot be reused
+[ ] Blocked paths (for example C:\Windows) are refused
+[ ] Every tool call appears in the audit log
+[ ] STOP cancels a running task
+[ ] The backend is not reachable from another device on the network
+
+3B. Basic computer tools
+Initial actions:
+- Open applications (approved list)
+- Close applications
+- Open folders
+- Open websites
+- Launch approved commands
+- Get basic system information (CPU, RAM, battery)
+- Volume, mute, media keys
+- Window list/focus/minimize, clipboard read/write
+- Power: lock, sleep, restart, shutdown (Section 9)
+
+Example:
+
+User: "Jarvis, open VS Code."
+
+JARVIS: "Certainly."
+
+VS Code opens.
+
+Acceptance tests:
+[ ] "Open VS Code / Chrome / my projects folder" works
+[ ] An app not on the approved list is refused with an explanation
+[ ] "Close Chrome" asks for confirmation when unsaved work is possible
+[ ] "Lock the PC" works; "Shut down" needs confirmation + PIN and can
+    be cancelled during the delay
+[ ] Volume and media commands work
+[ ] Works by typed command AND by voice command
+[ ] Failures give a clear message instead of a crash
+
+3C. Timers, alarms and reminders (Section 6.12)
+Acceptance tests:
+[ ] "Set a timer for 1 minute" fires with sound + notification
+[ ] Reminders survive a JARVIS restart
+[ ] Works with the internet turned off
+
+Completion condition: JARVIS can perform basic safe computer actions,
+the security tests pass, and the offline-capable tools work without
+internet.
+
+PHASE 4 - FILES AND CODING  (DONE)
+
+Goal: Turn JARVIS into a development assistant.
+
+Features:
+- Read files
+- Create files
+- Modify files (show a diff before writing; rely on Git or a backup)
+- Create folders
+- Inspect projects
+- Run development commands (allowlisted)
+- Run tests
+- Check Git status
+- Explain errors
+
+Example:
+
+User: "Jarvis, inspect my project and tell me why it is failing."
+
+JARVIS:
+- Inspects project
+- Finds relevant files
+- Identifies error
+- Explains problem
+- Suggests fix
+
+Acceptance tests:
+[x] Reads a file inside an approved project folder (PASS)
+[x] Refuses to read/write outside approved folders (C:\Windows, System32 protected) (PASS)
+[x] File edits show a diff and require confirmation (MEDIUM) (PASS)
+[x] Delete actions require explicit confirmation + PIN (HIGH) (PASS)
+[x] run_tests and git_status return readable results (PASS)
+[x] Long command output is shortened sensibly for the AI and the user (PASS)
+
+Completion condition: JARVIS can safely assist with real software
+projects. (Met: tested and verified via automated test suite tests/test_phase4.py)
+
+PHASE 5 - WEB INTELLIGENCE  (DONE)
+
+Goal: Give JARVIS access to current internet information.
+
+Features:
+- Web search
+- Current information
+- Documentation research
+- Summaries
+- Source-aware answers (show where information came from)
+
+Examples:
+"Search for the latest Next.js documentation."
+"Check today's weather."
+"Find the current information about this technology."
+
+Safety: web content is untrusted data (prompt-injection defense,
+Section 7). In offline mode these tools say "needs internet".
+
+Acceptance tests:
+[x] A current-events question returns up-to-date information with sources (PASS)
+[x] Weather works for the user's city (PASS)
+[x] When no reliable result is found, JARVIS says so instead of guessing (PASS)
+[x] With the internet off, JARVIS says web search is unavailable (PASS)
+[x] Rule 14 Prompt-injection defense and content truncation verified (PASS)
+
+Completion condition: JARVIS can answer current web-based questions reliably. (Met: tested and verified via tests/test_phase5.py - 8/8 tests pass)
+
+PHASE 6 - MEMORY
+
+Goal: Give JARVIS useful long-term context.
+
+Features:
+- Save approved preferences
+- Retrieve relevant memory
+- Project context
+- Conversation context (persistent history, Section 6.9)
+- Memory management (list, edit, delete, forget all)
+
+Example:
+
+User: "Remember that I usually use VS Code."
+
+Later: "Open my editor."
+
+JARVIS: "Opening VS Code."
+
+Acceptance tests:
+[ ] Saved memory survives a restart
+[ ] Secrets (passwords, keys) are refused as memory
+[ ] The user can view and delete any memory
+[ ] "Forget everything" works
+[ ] Memory works with the internet turned off
+
+Completion condition: Memory works without unnecessarily storing
+sensitive information.
+
+PHASE 7 - VISION
+
+Goal: Allow JARVIS to understand visual information.
+
+Features:
+- Screenshot capture (on request only)
+- Image analysis
+- UI understanding
+- Error recognition
+- Visual troubleshooting
+
+Example:
+
+User: "Jarvis, check this error on my screen."
+
+JARVIS: Analyzes screenshot and explains the problem.
+
+Acceptance tests:
+[ ] A screenshot of a code error is explained correctly
+[ ] Screenshots are not stored unless the user asks
+[ ] Instructions written inside an image are NOT obeyed as commands
+[ ] Offline: JARVIS says vision is unavailable (unless a local vision
+    model is installed)
+
+Completion condition: JARVIS can use vision as an additional input.
+
+PHASE 8 - ADVANCED AGENT  (DONE)
+
+Goal: Allow JARVIS to complete multi-step tasks.
+
+Features:
+- Structured task planning (TaskPlan, PlanStep)
+- Pre-configured autonomous engineering templates (deployment_prep, bug_diagnosis, workspace_audit)
+- Dynamic LLM-driven plan generation with allowlist validation
+- Sequential execution loop with live status tracking
+- Strict safety confirmation gates for MEDIUM and HIGH risk steps
+- Anti-loop circuit breaker (max 3 retries per step before halting)
+- Emergency STOP control to abort tasks immediately
+- Interactive Mission Control HUD in desktop modal
+- Comprehensive post-mission summary briefings
+
+Acceptance tests:
+[x] A plan is shown before execution (PASS)
+[x] Each step's status is visible (PASS)
+[x] Confirmation is requested for MEDIUM/HIGH steps (PASS)
+[x] The agent stops after repeated failures instead of looping (PASS)
+[x] A final summary of what was done and what failed is given (PASS)
+[x] Emergency STOP cancels running task immediately (PASS)
+[x] Phase 8 tools properly registered in registry and schema (PASS)
+
+Completion condition: JARVIS can safely complete useful multi-step workflows. (Met: tested and verified via automated test suite tests/test_phase8.py - 7/7 tests pass)
+
+PHASE 9 - FUTURISTIC DESKTOP UI
+
+Goal: Build the polished JARVIS interface.
+
+Possible UI:
+- Central JARVIS orb/visualizer
+- Listening indicator
+- System status
+- CPU/RAM information
+- Current task
+- Tool activity
+- Conversation history
+- Notifications
+- Command history
+- Online/offline indicator
+- Privacy dashboard (Section 20)
+- Animated futuristic interface
+
+Recommended frontend: Next.js + React + Tailwind CSS + Framer Motion.
+
+Packaging decision (made in this phase, not before): keep the browser
+dashboard opened by start_jarvis.bat, OR wrap it as a desktop app (for
+example Tauri or Electron) with tray icon and global hotkey. Decide
+based on the need for tray icon, hotkey and auto-start.
+
+Acceptance tests:
+[ ] UI stays responsive during long tasks
+[ ] Confirmation dialogs are clear and cannot be missed
+[ ] Works at common laptop screen sizes
+[ ] Animations do not noticeably slow the computer
+[ ] The whole UI loads with the internet turned off
+
+Completion condition: JARVIS has a professional desktop/web interface.
+
+PHASE 10 - AUTOMATION AND POLISH
+
+Goal: Make JARVIS reliable enough for daily use.
+
+Features:
+- Task history
+- Better error recovery (auto-restart of the backend after a crash,
+  health checks)
+- Tool permissions settings page
+- Confirmation dialogs (final polish)
+- Logging and log viewer
+- Configurable voice
+- Wake word "Jarvis" (on/off switch, clear microphone-active indicator,
+  processed locally if possible)
+- Global hotkey
+- Startup option (start with Windows, Section 8.2)
+- Performance improvements (Section 18)
+- Better memory retrieval
+- Better UI
+- Testing (full regression checklist)
+- Documentation (README, setup guide, user guide)
+- Backup/export and restore (Section 19)
+- Update/versioning process (Section 19)
+
+Completion condition: JARVIS becomes a practical personal assistant
+rather than a prototype.
+
+PHASE 11 - OFFLINE AND HYBRID MODE
+
+Goal: JARVIS keeps working without internet, with reduced capability,
+and switches between online and offline automatically.
+
+Features:
+- Connectivity detection (backend/network/connectivity.py)
+- Local model provider (Ollama or llama.cpp) behind the same provider
+  interface as the cloud model
+- Local speech-to-text (if not already done in Phase 2C)
+- Mode setting: ONLINE / OFFLINE / HYBRID (default HYBRID)
+- Automatic switch and switch-back, with a visible indicator
+- Built-in command matcher for offline safe commands (fallback when the
+  local model cannot call tools reliably)
+- Offline-aware tool messages ("needs internet")
+
+Acceptance tests (run with the internet physically OFF, for example
+Wi-Fi disabled):
+[ ] start_jarvis.bat starts and the dashboard loads fully
+[ ] Typed chat gets an answer from the local model
+[ ] Voice: local speech-to-text transcribes English (and Urdu/Hindi,
+    record accuracy)
+[ ] Local tools work: open app, volume, lock, timer, file read
+[ ] Web search says it is unavailable (no crash, no hang)
+[ ] Memory and history still work
+[ ] Turning the internet ON switches back to online mode automatically
+    (or asks, per setting)
+[ ] In forced OFFLINE mode, no requests go to AI services (verify
+    with a network monitor)
+[ ] Response time with the local model is recorded and acceptable
+[ ] A weak local model never gets to run HIGH risk actions on its own
+
+Completion condition: JARVIS stays useful without internet and
+switches modes safely.
+
+12. EXAMPLE FINAL COMMANDS
+
+Basic:
+"Jarvis, open Chrome."
+"Jarvis, open VS Code."
+"Jarvis, open my projects folder."
+"Jarvis, volume down."
+"Jarvis, lock the PC."
+
+Information:
+"Jarvis, search the web for..."
+"Jarvis, what is the current weather?"
+"Jarvis, explain this error."
+
+Time:
+"Jarvis, set a timer for 10 minutes."
+"Jarvis, remind me to call Ahmed at 5 pm."
+
+Development:
+"Jarvis, inspect this project."
+"Jarvis, run the development server."
+"Jarvis, check Git status."
+"Jarvis, find the error in this file."
+
+File operations:
+"Jarvis, create a folder."
+"Jarvis, create a text file."
+"Jarvis, read this file."
+
+Advanced:
+"Jarvis, prepare this project for deployment."
+"Jarvis, investigate why the build is failing."
+
+Sensitive:
+"Jarvis, delete this folder."
+"Jarvis, shut down the PC."
+
+Expected behavior: Ask for confirmation (and PIN) before destructive or
+high-risk actions.
+
+Offline examples:
+"Jarvis, open Chrome." (works)
+"Jarvis, search the web for..." (answer: "I need internet for that.")
+
+13. PROJECT RULES
+
+RULE 1: Build phase by phase.
+
+RULE 2: Do not add unnecessary packages.
+
+RULE 3: Do not expose API keys in frontend code.
+
+RULE 4: Keep secrets in environment variables.
+
+RULE 5: Use Git regularly (commit after each working feature; one
+branch per phase is recommended).
+
+RULE 6: Test each feature before adding the next feature. A phase is
+done only when its acceptance tests pass.
+
+RULE 7: Never give the AI unrestricted system access.
+
+RULE 8: Use confirmation for dangerous actions.
+
+RULE 9: Keep logs useful but avoid storing sensitive information
+unnecessarily.
+
+RULE 10: Prefer reliable simple solutions over complicated
+architecture.
+
+RULE 11: When a feature fails, fix the foundation before adding more
+features.
+
+RULE 12: Do not confuse a chatbot with an agent. JARVIS becomes an
+agent when it can safely use tools and perform actions.
+
+RULE 13: Security before capability. The security layer for a tool must
+exist and be tested before the tool itself is enabled.
+
+RULE 14: Treat all external content (web pages, files, screenshots) as
+untrusted data, never as instructions.
+
+RULE 15: Update this document at the end of every phase (status,
+structure, changelog).
+
+RULE 16: Build offline-ready from the start: providers behind
+interfaces, no CDN dependencies, local data, tools that declare whether
+they work offline.
+
+RULE 17: A voice "yes" alone never authorizes a HIGH risk action.
+
+14. ENVIRONMENT VARIABLES
+
+All secrets and configuration live in .env (never committed). A copy
+named .env.example, with empty values, is committed so the setup is
+documented.
+
+Expected items (verify the exact names against the real .env and keep
+this list in sync):
+
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=primary_model_id
+OPENROUTER_FALLBACK_MODELS=comma,separated,model,ids
+
+Mode and local AI (Phase 11):
+JARVIS_MODE=hybrid            (online / offline / hybrid)
+LOCAL_MODEL_NAME=local_model_id
+LOCAL_MODEL_URL=http://127.0.0.1:11434
+STT_PROVIDER=browser          (browser / local / cloud)
+(Optional, if a cloud STT provider is chosen:)
+STT_PROVIDER_API_KEY=your_key_here
+(Optional, later:)
+OPENAI_API_KEY=your_key_here
+
+Security:
+JARVIS_PIN_HASH=salted_hash   (generated by a setup command; never a
+                               plain PIN)
+
+Other services may add their own keys later.
+
+IMPORTANT:
+- Never commit .env to Git.
+- Add .env to .gitignore.
+- Never paste API keys into public repositories, screenshots or chats.
+- Never place keys in frontend code; the frontend talks only to the
+  backend.
+- Rotate a key immediately if it is accidentally exposed.
+- Set a spending/usage limit on every paid API key.
+
+15. LOGGING POLICY
+
+- Logs go to the logs/ folder, which is git-ignored.
+- Log: timestamp, event type, tool name, risk level, confirmation
+  result, success/failure, model used, online/offline mode, error
+  messages.
+- Do NOT log: API keys, PINs, passwords, full file contents, full
+  screenshots, or private conversation text beyond what is needed.
+- Rotate or delete old logs automatically (for example keep 30 days).
+- The audit log of tool calls is kept separately from debug logs.
+
+16. TESTING STRATEGY
+
+- Backend: pytest tests for each tool and for the security layer
+  (especially refusals, confirmations and PIN).
+- Frontend: lint + type-check before each commit; manual UI checklist
+  per phase.
+- Voice and microphone: manual test checklist (Phase 2B) on local
+  Chrome/Edge.
+- Offline: manual checklist with the internet physically off (Phase
+  11); repeat it after major changes.
+- Before finishing a phase: run all tests of that phase AND the tests of
+  earlier phases (regression).
+- Keep a short TEST_LOG (date, phase, result) in the repository.
+
+17. COST CONTROL
+
+- Prefer free/cheap models for simple chat; use stronger models only
+  for tool calling, coding and vision.
+- Set a monthly usage limit on every API key.
+- Limit the conversation history sent to the model (summarize or trim
+  old messages).
+- Limit tool-call and retry counts per task (Phase 8).
+- Vision and web search cost more: use them only on request.
+- Offline/local mode has no API cost (only electricity and hardware).
+- Show usage/cost information in the dashboard (Phase 9-10).
+
+18. PERFORMANCE TARGETS
+
+Targets to aim for (measure and adjust to the real hardware):
+- Dashboard starts (after start_jarvis.bat) in under 30 seconds.
+- Local command (open app, volume) completes in under 1 second after
+  the text is received.
+- Cloud AI: first words of the reply within about 3 seconds in normal
+  conditions.
+- Speech-to-text result within about 2 seconds after the user stops
+  talking (cloud); local STT target to be measured and recorded.
+- Local model: first words within about 5 to 10 seconds on a normal
+  laptop (to be measured).
+- JARVIS idle uses little CPU and a modest amount of RAM; record the
+  numbers in the test log.
+- Animations stay smooth and never block commands.
+
+19. BACKUP, UPDATES AND PACKAGING
+
+Backup and restore:
+- Export: settings, memory, reminders and history to a single backup
+  file (zip) in backups/ (git-ignored, never includes API keys).
+- Restore: import a backup file; show what will be replaced and ask for
+  confirmation.
+- Automatic backup before any update or database change.
+
+Updates and versioning:
+- Version number shown in the dashboard and in logs.
+- Database changes use migrations so old data keeps working after an
+  update.
+- Update process: commit/tag in Git, backup, update, run tests, verify
+  start_jarvis.bat.
+- Keep a short changelog in the repository.
+
+Packaging (only when needed, for example another PC):
+- Simple option: copy the project + a setup script that creates the
+  virtual environment, installs dependencies and creates .env from
+  .env.example.
+- Later option: installer (for example with the desktop app packager)
+  if JARVIS is shared or installed on other computers.
+- Local models are NOT bundled in git; the setup guide explains how to
+  download them.
+
+20. PRIVACY DASHBOARD
+
+A single page in the dashboard (Phase 9-10) that shows and controls:
+- Stored memories (view/edit/delete, forget all)
+- Conversation history (view/clear)
+- Logs (view/delete)
+- Saved settings
+- Microphone and screen-capture permissions status
+- Which mode is active (online/offline) and what data leaves the PC in
+  each mode
+- Export/backup and delete-all-data buttons
+
+21. RISKS AND MITIGATIONS
+
+- Wrong or invented AI answers -> show sources (Phase 5), confirm
+  important actions, keep the user in control.
+- Destructive actions by mistake -> risk levels, confirmations, PIN,
+  path and command rules, backups/Git.
+- Someone else speaking near the microphone -> PIN for HIGH risk
+  actions, no voice-only approval (Rule 17).
+- Prompt injection from web/files/images -> Rule 14.
+- Free model rate limits/outages -> fallback chain, clear error
+  message, option to switch model, offline mode (Phase 11).
+- Speech recognition errors, especially Urdu -> editable text before
+  sending, STT fallback (Phase 2C).
+- Weak local models acting wrongly offline -> command matcher, no
+  autonomous HIGH risk actions, offline agent tasks disabled by
+  default.
+- API key leak -> .env rules, usage limits, rotate immediately.
+- Backend reachable by others on the network -> bind to 127.0.0.1 only,
+  CORS restriction.
+- Privacy of microphone/screen -> clear indicators, on-request capture
+  only, no hidden recording.
+- Local models too slow on this laptop -> choose smaller models, record
+  measurements, keep cloud as the main mode.
+- Over-building too early -> Rules 1, 6 and 11.
+
+22. FUTURE FEATURES
+
+Possible future upgrades (after Phase 11):
+
+- Continuous listening mode
+- Custom JARVIS voice/personality
+- Roman Urdu replies and typed understanding (Section 6.10)
+- Additional languages
+- Desktop notifications (partly covered by reminders)
+- Calendar integration
+- Email integration
+- Smart home integration
+- Music control (beyond basic media keys)
+- Advanced system monitoring
+- GitHub integration
+- Deployment automation
+- Project-specific agents
+- Multiple specialized sub-agents
+- Local vision model for offline screen understanding
+- Mobile companion app (including Wake-on-LAN). Remote access is the
+  riskiest feature: it needs its own authentication and security design
+  and is built last.
+
+23. HARDWARE PLAN
+
+Initial development: No laptop upgrade is required.
+
+Cloud AI approach:
+- Normal Windows laptop is sufficient.
+- CPU/GPU does not need to be powerful for most AI API operations.
+- Internet connection is important.
+
+Local/offline approach (Phase 11):
+- Small models (about 3B parameters, quantized): usually workable with
+  8 GB RAM, slow on CPU.
+- Better models (7B-8B): 16 GB RAM recommended; a GPU makes responses
+  much faster.
+- Local speech-to-text: small/base models run on CPU; larger models
+  (better for Urdu) are slower and benefit from a GPU.
+- Disk: allow roughly 5 to 20 GB for local models.
+- These are rough guides. Test on the real laptop before buying
+  anything.
+
+Possible future hardware considerations:
+- 16 GB RAM or more
+- Fast SSD
+- Strong CPU
+- NVIDIA GPU with suitable VRAM for local models
+
+Do NOT upgrade hardware before testing the actual project requirements.
+
+24. CURRENT STATUS (updated 09 October 2026)
+
+Completed:
+[x] Project concept and architecture documented
+[x] Development phases defined
+[x] Git, Node.js, npm, and Python 3.11 verified
+[x] FastAPI AI Brain backend implemented
+[x] OpenRouter AI integration tested
+[x] Phase 1 text chat and health endpoint tested against the running
+    backend
+[x] Phase 1.5 Next.js dashboard connected to the backend
+[x] Dashboard displays live backend/model state and conversation
+[x] Voice replies use device-installed system voices, with voice
+    selection, preview, and saved preference
+[x] Shared speech-recognition and AI-response language selection for
+    English, Urdu, and Hindi
+[x] Recognized speech appears in the editable message box for review
+    before sending
+[x] OpenRouter free-model fallback continues after a rate-limit
+    response
+[x] Documentation completed (this master file, v2.0)
+
+In progress:
+[/] Phase 2 - Voice, step 2B. Browser speech recognition is connected,
+    but end-to-end microphone transcription depends on the browser's
+    recognition service and a working network. The test browser
+    returned a recognition network error. Device voice output uses the
+    selected local system voice and does not generate or clone voices.
+    Microphone and audible playback still need a local Chrome or Edge
+    test with permissions enabled.
+
+Known issues:
+- Browser recognition network error in the test browser.
+- Urdu/Hindi recognition accuracy not yet measured.
+- Browser recognition cannot work offline.
+
+Next steps:
+1. Run the Phase 2B acceptance tests in local Chrome/Edge and record
+   PASS/FAIL per language.
+2. If recognition stays unreliable or inaccurate for Urdu, or offline
+   use is wanted, do Phase 2C (prefer a local STT if quality is
+   acceptable).
+3. Check the project against Section 5 and Section 14 (folder
+   structure, env variable names, start_jarvis.bat) and correct this
+   document where they differ.
+4. Apply the offline-ready design rules (Section 10.4) to new code from
+   now on.
+5. Start Phase 3 with step 3A (security foundation) ONLY after the
+   Phase 2 completion condition passes.
+
+25. FIRST MILESTONE
+
+The first real milestone is:
+
+    User starts JARVIS
+          |
+          v
+    User sends a message via Desktop UI / Text
+          |
+          v
+    AI receives it
+          |
+          v
+    AI responds
+          |
+          v
+    JARVIS displays the response in Futuristic UI
+
+Status: ACHIEVED (Phase 1 + 1.5).
+
+After this works reliably, the order is:
+
+    Text / UI Dashboard
+      |
+      v
+    Voice (TTS & STT)
+      |
+      v
+    Security foundation + PC control (System Tools)
+      |
+      v
+    Files & Coding
+      |
+      v
+    Web
+      |
+      v
+    Memory
+      |
+      v
+    Vision
+      |
+      v
+    Autonomous multi-step tasks
+      |
+      v
+    Polished UI -> Automation + Polish -> Offline/Hybrid mode
+
+26. DEFINITION OF DONE (WHOLE PROJECT)
+
+JARVIS version 1.0 is complete when:
+[ ] The user can speak or type a command and get a spoken and written
+    reply
+[ ] JARVIS can open apps, folders and websites safely
+[ ] JARVIS can control volume, media, windows, and lock/sleep/restart/
+    shut down the PC with the right confirmations
+[ ] Timers, alarms and reminders work
+[ ] JARVIS can help with real code projects (read, edit with
+    confirmation, run tests, explain errors)
+[ ] JARVIS can answer current questions with sources (online)
+[ ] JARVIS remembers approved preferences and can forget them
+[ ] JARVIS can analyze a screenshot on request (online)
+[ ] JARVIS can complete a multi-step task with visible progress and
+    confirmations
+[ ] Dangerous actions are never executed without explicit confirmation
+    (and PIN for HIGH risk)
+[ ] JARVIS works in hybrid mode: useful offline, switches back online
+[ ] Backup/restore works and updates do not lose data
+[ ] All acceptance tests of all phases pass
+[ ] The dashboard is polished and stable
+[ ] Setup, daily use and troubleshooting are documented in README.md
+[ ] No secrets are stored in Git or in the frontend
+
+27. PROJECT PHILOSOPHY
+
+JARVIS should be:
+
+- Helpful
+- Fast
+- Safe
+- Explainable
+- Controllable
+- Extensible
+- Reliable
+- Private (works offline when needed)
+
+The objective is not to make a fictional AI overnight.
+
+The objective is to gradually build a real personal AI agent that can
+become more capable over time.
+
+28. QUICK ROADMAP
+
+PHASE 0   -> Setup (Done)
+PHASE 1   -> AI Brain (Done)
+PHASE 1.5 -> Early Futuristic Desktop UI (Done)
+PHASE 2   -> Voice (In Progress: step 2B microphone/audio verification)
+PHASE 3   -> Security Foundation + PC Control + Timers/Reminders
+PHASE 4   -> Files + Coding (Done)
+PHASE 5   -> Web (online only) (Done)
+PHASE 6A  -> Creator Identity & Digital Dossier (Done - Personal Dossier, GitHub live sync, Avatar, PIN Gate)
+PHASE 2+  -> Voice Biometrics & Neural Speech (Done - 48D Speaker Recognition, Edge-TTS ur-PK-AsadNeural & en-US-ChristopherNeural)
+PHASE 6B  -> Persistent Episodic & Project Memory (Next)
+PHASE 7   -> Vision (Screenshot analysis & error recognition)
+PHASE 8   -> Advanced Agent (Multi-step workflows)
+PHASE 9   -> Polished Desktop UI
+PHASE 10  -> Automation & Hands-Free (Wake Word "Hey JARVIS", Auto-start, Global hotkey)
+PHASE 11  -> Offline / Hybrid Mode
+
+Current position:
+
+    >>> CREATOR DOSSIER + VOICE BIOMETRICS + EDGE-TTS NEURAL VOICE COMPLETE <<<
+    >>> READY FOR: WAKE WORD ("Hey JARVIS") OR PHASE 6B (EPISODIC MEMORY) / PHASE 7 (VISION) <<<
+
+Note: if offline use is a high priority, bring the local STT part
+(Phase 2C) forward now; the rest of Phase 11 stays at the end.
+
+29. IMPORTANT NOTE
+
+This document is the project's main roadmap.
+
+Whenever a new feature is proposed, first decide which phase it belongs
+to.
+
+Do not skip core foundations just because a later feature looks
+exciting.
+
+The project should always move from:
+
+    FOUNDATION
+        ->
+    CAPABILITY
+        ->
+    SAFETY
+        ->
+    AUTOMATION
+        ->
+    POLISH
+
+(Safety is built together with each capability, not after it: see
+Rule 13.)
+
+30. CHANGELOG
+
+v2.3 (17 Oct 2026) - PHASE 10A & 10B COMPLETE (HANDS-FREE WAKE WORD & OPEN MIC MODE)
+- Implemented Multi-Lingual Hands-Free Wake Word Engine (wake_word.py, page.tsx):
+  Zero-delay instant recognition (<100ms) with dual-script regex (English + Urdu Nastaliq).
+  Synthesized dual-frequency Web Audio API sci-fi chime (587Hz -> 880Hz).
+  Hollywood-grade Arc Reactor Orb with 9-band symmetric equalizer and concentric sonar HUD.
+- Implemented Phase 10B Continuous Dialogue & Open Mic Conversation Mode:
+  Dedicated navbar toggle "OPEN MIC: LIVE" / "OPEN MIC: OFF".
+  Eliminates the need to repeat "JARVIS" before every query.
+  Double-buffered barge-in echo protection prevents speaker loopback while answering.
+  Auto-exit detection upon conversational phrases ("Stop conversation", "Shukriya", "Alvida", "Sleep mode").
+
+v2.2 (17 Oct 2026) - CREATOR DOSSIER, VOICE BIOMETRICS & NEURAL VOICE UPGRADE
+- Implemented Creator Digital Dossier (creator_dossier.py, creator_dossier.json):
+  Replaced static legacy vault with full open creator profile for Muhammad Akmal (Akmal bhai).
+  Added online satellite coordinates (GitHub @AkmalDoghar, LinkedIn, Portfolio https://akmalcode.vercel.app, Instagram).
+  Added automated GitHub scraper extracting live public repos, star counts, followers, and language badges.
+  Added high-resolution Profile Avatar (GitHub CDN https://github.com/AkmalDoghar.png + custom URL with live preview).
+  Added High-Security PIN Gate (Salted PBKDF2 SHA-256) with auto-lock on modal close.
+- Implemented Voice Biometrics Engine (security/voiceprint.py, voice/speech_to_text.py):
+  48-dimensional speaker verification using MFCCs and spectral features with cosine similarity thresholding.
+  Commands and actions blocked (403 Forbidden) if spoken by unauthorized voices.
+  Added status endpoint, sample enrollment counter, and reset/delete button.
+- Implemented Realistic Edge-TTS Neural Voice (voice/text_to_speech.py, voice/transliterate.py):
+  Replaced robotic system voices with Microsoft Edge-TTS neural engine.
+  Phonetic Urdu Nastaliq transliteration for natural Roman Urdu pronunciation via ur-PK-AsadNeural.
+  Natural human male voice en-US-ChristopherNeural for English.
+  100% free, zero API key required, with pyttsx3 fallback.
+
+v2.1 (15 Oct 2026) - PHASE 5 COMPLETE
+- Implemented real-time web search with DuckDuckGo (search_web).
+- Implemented live weather intelligence (get_weather) with structured conditions, humidity, wind, and spoken summaries.
+- Implemented safe webpage reader (read_webpage) with Rule 14 prompt-injection defense and length truncation.
+- Added offline connectivity check (is_online) with graceful no-internet error reporting (Rule 16).
+- All 8 acceptance tests verified in tests/test_phase5.py.
+
+v2.0 (09 Oct 2026) - FINAL MASTER
+- Added Section 8 (How to Run and Use JARVIS, screen overview,
+  troubleshooting).
+- Added Section 9 (Power control and the fact that JARVIS cannot turn
+  the PC on; Wake-on-LAN and scheduled wake options).
+- Added Section 10 and Phase 11 (Offline and Hybrid mode, with honest
+  limitations and tests).
+- Added PIN/passphrase for HIGH risk actions, localhost-only backend,
+  single instance, Rule 17.
+- Added no-internet behavior, barge-in, timers/alarms/reminders, media,
+  window and clipboard control.
+- Added backup/restore, updates/versioning, packaging, privacy
+  dashboard, performance targets.
+- Added offline flag per tool, offline tests per phase, local STT
+  recommendation, new env variables, hardware notes for local models.
+- Merged everything into one master file with a table of contents.
+
+v1.1 (09 Oct 2026)
+- Fixed inconsistencies (Python, Phase 0 checklist, OpenRouter, Phase
+  1.5, Urdu/Hindi status).
+- Added security foundation in Phase 3, model strategy, STT fallback,
+  testing, logging, cost control, risks, Definition of Done.
+
+v1.0 (07 Oct 2026)
+- Initial documentation.
+
+END OF DOCUMENT
