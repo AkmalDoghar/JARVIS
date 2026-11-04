@@ -886,6 +886,70 @@ def api_agent_stop(request: AgentStopRequest = None):
     res = global_agent_executor.stop_execution()
     return res
 
+# ======================================================================
+# PHASE 9 & 10: DESKTOP PACKAGING, GLOBAL HOTKEY & AUTOSTART ENDPOINTS
+# ======================================================================
+
+@app.on_event("startup")
+def on_startup_desktop_init():
+    """Initialize global hotkey listener on backend start."""
+    try:
+        from backend.desktop.hotkey import start_hotkey_listener
+        start_hotkey_listener(hotkey_type="ctrl_space")
+    except Exception as e:
+        print(f"[Desktop] Hotkey init notice: {e}")
+
+@app.get("/api/desktop/status")
+def api_desktop_status():
+    """Retrieve combined status of System Tray, Global Hotkey, and Windows AutoStart."""
+    from backend.desktop.autostart import get_autostart_status
+    from backend.desktop.hotkey import get_hotkey_status
+    from backend.desktop.tray import get_tray_instance
+
+    tray = get_tray_instance()
+    return {
+        "autostart": get_autostart_status(),
+        "hotkey": get_hotkey_status(),
+        "tray": {
+            "running": tray.is_running,
+            "wake_word_enabled": tray._wake_word_enabled,
+            "open_mic_enabled": tray._open_mic_enabled
+        }
+    }
+
+class AutostartToggleRequest(BaseModel):
+    enabled: bool
+
+@app.get("/api/desktop/autostart")
+def api_desktop_autostart_get():
+    """Check if 'Start with Windows' is active."""
+    from backend.desktop.autostart import get_autostart_status
+    return get_autostart_status()
+
+@app.post("/api/desktop/autostart/toggle")
+def api_desktop_autostart_toggle(request: AutostartToggleRequest):
+    """Enable or disable 'Start with Windows'."""
+    from backend.desktop.autostart import enable_autostart, disable_autostart, get_autostart_status
+    if request.enabled:
+        enable_autostart()
+    else:
+        disable_autostart()
+    return {"status": "success", "autostart": get_autostart_status()}
+
+class HotkeyToggleRequest(BaseModel):
+    enabled: bool
+    hotkey_type: Optional[str] = "ctrl_space"
+
+@app.post("/api/desktop/hotkey/toggle")
+def api_desktop_hotkey_toggle(request: HotkeyToggleRequest):
+    """Enable or disable Global Hotkey listener."""
+    from backend.desktop.hotkey import start_hotkey_listener, stop_hotkey_listener, get_hotkey_status
+    if request.enabled:
+        start_hotkey_listener(hotkey_type=request.hotkey_type or "ctrl_space")
+    else:
+        stop_hotkey_listener()
+    return {"status": "success", "hotkey": get_hotkey_status()}
+
 
 if __name__ == "__main__":
     import uvicorn

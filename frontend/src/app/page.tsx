@@ -33,8 +33,8 @@ interface BrowserSpeechRecognizer {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  onresult: ((event: { results: SpeechResultList }) => void) | null;
-  onerror: ((event: { error: string }) => void) | null;
+  onresult: ((event: { results: SpeechResultList; resultIndex?: number }) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   abort: () => void;
@@ -67,6 +67,12 @@ export function cleanTextForSpeech(text: string): string {
   return cleaned;
 }
 
+let messageSequenceId = 0;
+function createMessageId(): string {
+  messageSequenceId += 1;
+  return `msg_${messageSequenceId}`;
+}
+
 export default function Dashboard() {
   // Chat & Messaging State
   const [messages, setMessages] = useState<{
@@ -84,10 +90,30 @@ export default function Dashboard() {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isWakeWordEnabled, setIsWakeWordEnabled] = useState(true);
   const [isContinuousConversation, setIsContinuousConversation] = useState(false);
-  const wakeWordRecognitionRef = useRef<BrowserSpeechRecognizer | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<"ur" | "en" | "hi" | "auto">("ur");
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  // Synchronized Engine Refs (prevents state-closure race conditions in async voice recognizers)
+  const isListeningRef = useRef(false);
+  const isSpeakingRef = useRef(false);
+  const isWakeWordEnabledRef = useRef(true);
+  const isContinuousConversationRef = useRef(false);
+  const loadingRef = useRef(false);
+  const selectedLanguageRef = useRef<"ur" | "en" | "hi" | "auto">("ur");
+  const currentRecognizerRef = useRef<BrowserSpeechRecognizer | null>(null);
+  const activeModeRef = useRef<"idle" | "wake" | "active">("idle");
+  const isTransitioningRef = useRef(false);
+  const startWakeWordListeningRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    isListeningRef.current = isListening;
+    isSpeakingRef.current = isSpeaking;
+    isWakeWordEnabledRef.current = isWakeWordEnabled;
+    isContinuousConversationRef.current = isContinuousConversation;
+    loadingRef.current = loading;
+    selectedLanguageRef.current = selectedLanguage;
+  }, [isListening, isSpeaking, isWakeWordEnabled, isContinuousConversation, loading, selectedLanguage]);
 
   const handleCopyText = async (text: string, id: string) => {
     try {
@@ -624,9 +650,301 @@ export default function Dashboard() {
     }
   };
 
+  const getSpeechRecognizer = () => {
+    if (typeof window === "undefined") return null;
+    const win = window as unknown as { 
+      SpeechRecognition?: new () => BrowserSpeechRecognizer; 
+      webkitSpeechRecognition?: new () => BrowserSpeechRecognizer 
+    };
+    return win.SpeechRecognition || win.webkitSpeechRecognition || null;
+  };
+
+  const stopCurrentRecognizer = () => {
+    if (currentRecognizerRef.current) {
+      try {
+        const rec = currentRecognizerRef.current;
+        currentRecognizerRef.current = null;
+        rec.onresult = null;
+        rec.onerror = null;
+        rec.onend = null;
+        rec.stop();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const checkWakeWord = (rawText: string) => {
+    if (!rawText) return { detected: false, command: "" };
+    const lower = rawText.toLowerCase().trim();
+
+    // Comprehensive phonetic & multilingual wake word markers
+    const wakeMarkers = [
+      "jarvis", "jarvice", "jervis", "zarvis", "yarvis", "service",
+      "hey jarvis", "hay jarvis", "aye jarvis", "oye jarvis",
+      "suno jarvis", "jarvis suno", "hello jarvis", "hi jarvis",
+      "ok jarvis", "okay jarvis", "جاروس", "جارویس", "سنو جاروس"
+    ];
+
+    const hasWakeWord = wakeMarkers.some(m => lower.includes(m));
+    if (!hasWakeWord) return { detected: false, command: "" };
+
+    // Extract command after wake word
+    const command = rawText
+      .replace(/^(?:hey|hay|aye|oi|oye|ok|okay|suno|hello|hi|سنو|اوئے|ہیلو)?\s*(?:jarvis|jarvice|jervis|zarvis|yarvis|service|جاروس|جارویس)\s*[,.:!?-]?\s*/i, "")
+      .replace(/\b(?:hey|suno|oye)?\s*(?:jarvis|jarvice|jervis|zarvis|yarvis|service|جاروس|جارویس)\b/i, "")
+      .trim();
+
+    return { detected: true, command };
+  };
+
+  const onWakeWordTriggered = async (command: string) => {
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+
+    stopCurrentRecognizer();
+    playWakeChime();
+
+    if (command && command.length > 1) {
+      showNotice(`🎙️ Wake Command: "${command}"`);
+      isTransitioningRef.current = false;
+      handleSend(undefined, command);
+    } else {
+      showNotice("🎙️ JARVIS: Ji Akmal bhai? Listening...");
+      await speakResponse("Ji Akmal bhai?");
+      isTransitioningRef.current = false;
+      setTimeout(() => {
+        startActiveListening("Ji Akmal bhai, sun raha hoon...");
+      }, 250);
+    }
+  };
+
+  const startWakeWordListening = () => {
+    if (!isWakeWordEnabledRef.current || isListeningRef.current || isSpeakingRef.current || loadingRef.current || isTransitioningRef.current) {
+      return;
+    }
+
+    stopCurrentRecognizer();
+
+    const SpeechRec = getSpeechRecognizer();
+    if (!SpeechRec) return;
+
+    try {
+      const recognizer = new SpeechRec();
+      recognizer.continuous = true;
+      recognizer.interimResults = true;
+      recognizer.lang = "en-US";
+
+      activeModeRef.current = "wake";
+
+      recognizer.onresult = (event) => {
+        if (isSpeakingRef.current || isListeningRef.current || loadingRef.current || isTransitioningRef.current) {
+          return;
+        }
+
+        const startIdx = event.resultIndex ?? 0;
+        for (let i = startIdx; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript.trim();
+          if (!transcript) continue;
+
+          const match = checkWakeWord(transcript);
+          if (match.detected) {
+            onWakeWordTriggered(match.command);
+            break;
+          }
+        }
+      };
+
+      recognizer.onerror = (err: { error?: string }) => {
+        if (err.error === "not-allowed") {
+          showNotice("Microphone permission blocked. Please allow microphone in browser.");
+        }
+      };
+
+      recognizer.onend = () => {
+        if (activeModeRef.current === "wake" && isWakeWordEnabledRef.current && !isListeningRef.current && !isSpeakingRef.current && !loadingRef.current && !isTransitioningRef.current) {
+          setTimeout(() => {
+            if (activeModeRef.current === "wake" && isWakeWordEnabledRef.current && !isListeningRef.current && !isSpeakingRef.current) {
+              startWakeWordListening();
+            }
+          }, 450);
+        }
+      };
+
+      currentRecognizerRef.current = recognizer;
+      recognizer.start();
+    } catch (e) {
+      console.warn("Wake word listener init notice:", e);
+    }
+  };
+  useEffect(() => {
+    startWakeWordListeningRef.current = startWakeWordListening;
+  });
+
+  const startActiveListening = (customPrompt?: string) => {
+    if (isSpeakingRef.current) {
+      stopSpeaking();
+    }
+    stopCurrentRecognizer();
+
+    activeModeRef.current = "active";
+    setIsListening(true);
+    isListeningRef.current = true;
+
+    const langLabel = selectedLanguageRef.current === "ur" ? "Urdu" : selectedLanguageRef.current === "hi" ? "Hindi" : selectedLanguageRef.current === "en" ? "English" : "Auto";
+    setInputValue(customPrompt || `Listening... [${langLabel}]`);
+
+    const sttLanguage = selectedLanguageRef.current === "en" ? "en-US" : selectedLanguageRef.current === "hi" ? "hi-IN" : "ur-PK";
+
+    const SpeechRec = getSpeechRecognizer();
+    if (SpeechRec) {
+      try {
+        const recognizer = new SpeechRec();
+        recognizer.continuous = false;
+        recognizer.interimResults = true;
+        recognizer.lang = sttLanguage;
+
+        let finalTranscript = "";
+
+        recognizer.onresult = (event) => {
+          let interim = "";
+          for (let i = 0; i < event.results.length; i++) {
+            const res = event.results[i];
+            if (res.isFinal || (res as unknown as SpeechResultAlternative[])[0]) {
+              const text = res[0].transcript;
+              if (res.isFinal) {
+                finalTranscript = text;
+              } else {
+                interim += text;
+              }
+            }
+          }
+          if (interim) {
+            setInputValue(interim);
+          }
+        };
+
+        recognizer.onerror = async (err: { error?: string }) => {
+          console.warn("SpeechRecognition active notice:", err);
+          if (err.error === "not-allowed") {
+            showNotice("Microphone permission blocked. Please click the lock icon in address bar to Allow.");
+            setIsListening(false);
+            isListeningRef.current = false;
+            setInputValue("");
+          } else if (err.error === "no-speech") {
+            setIsListening(false);
+            isListeningRef.current = false;
+            setInputValue("");
+            if (isContinuousConversationRef.current) {
+              setTimeout(() => {
+                if (isContinuousConversationRef.current && !isSpeakingRef.current && !loadingRef.current) {
+                  startActiveListening();
+                }
+              }, 400);
+            } else if (isWakeWordEnabledRef.current) {
+              setTimeout(() => {
+                startWakeWordListening();
+              }, 300);
+            }
+          } else {
+            setIsListening(false);
+            isListeningRef.current = false;
+            await fallbackBackendListen(sttLanguage);
+          }
+        };
+
+        recognizer.onend = () => {
+          setIsListening(false);
+          isListeningRef.current = false;
+          const trimmed = finalTranscript.trim();
+          if (trimmed) {
+            setInputValue(trimmed);
+
+            // Check for Open Mic exit phrases
+            const lower = trimmed.toLowerCase();
+            const exitPhrases = ["stop conversation", "band karo", "shukriya jarvis", "alvida", "goodbye", "sleep mode", "stop listening"];
+            if (isContinuousConversationRef.current && exitPhrases.some(p => lower.includes(p))) {
+              setIsContinuousConversation(false);
+              isContinuousConversationRef.current = false;
+              showNotice("Open Mic mode ended.");
+              speakResponse("Ji Akmal bhai, open mic band kar diya hai. Standby mode active.");
+              setTimeout(() => {
+                if (isWakeWordEnabledRef.current) startWakeWordListening();
+              }, 400);
+              return;
+            }
+
+            handleSend(undefined, trimmed);
+          } else {
+            setInputValue("");
+            if (isContinuousConversationRef.current) {
+              setTimeout(() => {
+                if (isContinuousConversationRef.current && !isSpeakingRef.current && !loadingRef.current) {
+                  startActiveListening();
+                }
+              }, 400);
+            } else if (isWakeWordEnabledRef.current) {
+              setTimeout(() => {
+                startWakeWordListening();
+              }, 300);
+            }
+          }
+        };
+
+        currentRecognizerRef.current = recognizer;
+        recognizer.start();
+        return;
+      } catch (e) {
+        console.warn("Native speech start failed, falling back to backend:", e);
+      }
+    }
+
+    fallbackBackendListen(sttLanguage);
+  };
+
+  const fallbackBackendListen = async (sttLanguage: string) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/voice/listen?language=${sttLanguage}`, {
+        method: "POST"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === "timeout" || data.status === "unrecognized") {
+          setInputValue("");
+          if (isContinuousConversationRef.current) {
+            setTimeout(() => {
+              if (isContinuousConversationRef.current && !isSpeakingRef.current && !loadingRef.current) {
+                startActiveListening();
+              }
+            }, 500);
+          } else if (isWakeWordEnabledRef.current) {
+            setTimeout(() => {
+              startWakeWordListening();
+            }, 300);
+          }
+          return;
+        }
+
+        setInputValue(data.transcript);
+        handleSend(undefined, data.transcript);
+      } else {
+        const err = await response.json();
+        setInputValue("");
+        showNotice(err.detail || "Couldn't catch that clearly.");
+      }
+    } catch {
+      setInputValue("");
+      showNotice("Failed to connect to JARVIS Voice Engine.");
+    } finally {
+      setIsListening(false);
+      isListeningRef.current = false;
+    }
+  };
+
   const toggleWakeWord = async () => {
     const nextState = !isWakeWordEnabled;
     setIsWakeWordEnabled(nextState);
+    isWakeWordEnabledRef.current = nextState;
     try {
       await fetch("http://127.0.0.1:8000/api/voice/wake-word/toggle", {
         method: "POST",
@@ -637,20 +955,63 @@ export default function Dashboard() {
       // ignore
     }
     showNotice(nextState ? "🎙️ Hands-Free Wake Word armed! Say 'Hey JARVIS' or 'Suno JARVIS' anytime." : "Wake Word listening paused.");
-    if (nextState) playWakeChime();
+    if (nextState) {
+      playWakeChime();
+      setTimeout(() => {
+        startWakeWordListening();
+      }, 300);
+    } else {
+      stopCurrentRecognizer();
+    }
   };
 
-  const toggleContinuousConversation = () => {
+  const toggleContinuousConversation = async () => {
     const nextState = !isContinuousConversation;
     setIsContinuousConversation(nextState);
+    isContinuousConversationRef.current = nextState;
+
     if (nextState) {
-      if (!isWakeWordEnabled) setIsWakeWordEnabled(true);
+      if (!isWakeWordEnabled) {
+        setIsWakeWordEnabled(true);
+        isWakeWordEnabledRef.current = true;
+      }
       playWakeChime();
       showNotice("🎙️ Open Mic Mode ACTIVATED! Speak freely without saying 'JARVIS'.");
-      speakResponse("Ji Akmal bhai, continuous conversation active hai. Aap direct baat kar sakte hain.");
+      await speakResponse("Ji Akmal bhai, open mic active hai. Aap direct baat kar sakte hain.");
+      setTimeout(() => {
+        startActiveListening();
+      }, 350);
     } else {
       showNotice("Open Mic Mode paused. Standby mode active.");
-      speakResponse("Continuous conversation paused.");
+      stopCurrentRecognizer();
+      await speakResponse("Open mic paused.");
+      setTimeout(() => {
+        if (isWakeWordEnabledRef.current) {
+          startWakeWordListening();
+        }
+      }, 300);
+    }
+  };
+
+  const toggleListen = () => {
+    if (isListeningRef.current) {
+      stopCurrentRecognizer();
+      setIsListening(false);
+      isListeningRef.current = false;
+      setInputValue("");
+      if (isWakeWordEnabledRef.current) {
+        setTimeout(() => startWakeWordListening(), 300);
+      }
+    } else {
+      startActiveListening();
+    }
+  };
+
+  const handleOrbClick = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      toggleListen();
     }
   };
 
@@ -663,10 +1024,11 @@ export default function Dashboard() {
       await stopSpeaking();
     }
 
-    const userMsg = { id: Date.now().toString(), sender: "user" as const, text: textToSend, time };
+    const userMsg = { id: createMessageId(), sender: "user" as const, text: textToSend, time };
     setMessages(prev => [...prev, userMsg]);
     setInputValue("");
     setLoading(true);
+    loadingRef.current = true;
 
     const conversationHistory = messages.map(m => ({
       role: m.sender === "user" ? "user" : "assistant",
@@ -702,7 +1064,7 @@ export default function Dashboard() {
       }
 
       setMessages(prev => [...prev, { 
-        id: (Date.now() + 1).toString(), 
+        id: createMessageId(), 
         sender: "jarvis", 
         text: reply, 
         spokenText: spoken,
@@ -716,7 +1078,7 @@ export default function Dashboard() {
         ? "JARVIS AI core request timed out. Please try again." 
         : "Connection error with JARVIS AI core.";
       setMessages(prev => [...prev, { 
-        id: (Date.now() + 1).toString(), 
+        id: createMessageId(), 
         sender: "jarvis", 
         text: errorMsg, 
         spokenText: errorMsg,
@@ -724,6 +1086,22 @@ export default function Dashboard() {
       }]);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
+
+      // Seamless hands-free continuation
+      if (isContinuousConversationRef.current) {
+        setTimeout(() => {
+          if (isContinuousConversationRef.current && !isSpeakingRef.current) {
+            startActiveListening();
+          }
+        }, 350);
+      } else if (isWakeWordEnabledRef.current) {
+        setTimeout(() => {
+          if (!isListeningRef.current && !isSpeakingRef.current) {
+            startWakeWordListening();
+          }
+        }, 250);
+      }
     }
   };
 
@@ -745,15 +1123,29 @@ export default function Dashboard() {
         const confirmMsg = data.result?.result?.message || `Executed ${pendingAction.toolName}.`;
         const spokenConfirm = "Ji Akmal bhai, action approve kar ke execute kar diya hai.";
         setMessages(prev => [...prev, {
-          id: Date.now().toString(),
+          id: createMessageId(),
           sender: "jarvis",
           text: confirmMsg,
           spokenText: spokenConfirm,
           time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
         }]);
-        speakResponse(spokenConfirm);
+        await speakResponse(spokenConfirm);
         setPendingAction(null);
         setPinInput("");
+
+        if (isContinuousConversationRef.current) {
+          setTimeout(() => {
+            if (isContinuousConversationRef.current && !isSpeakingRef.current) {
+              startActiveListening();
+            }
+          }, 350);
+        } else if (isWakeWordEnabledRef.current) {
+          setTimeout(() => {
+            if (!isListeningRef.current && !isSpeakingRef.current) {
+              startWakeWordListening();
+            }
+          }, 250);
+        }
       } else {
         showNotice(data.detail || "Confirmation rejected.");
       }
@@ -780,125 +1172,6 @@ export default function Dashboard() {
     setPinInput("");
   };
 
-  const toggleListen = async () => {
-    if (isListening) return;
-    if (isSpeaking) {
-      await stopSpeaking();
-    }
-
-    setIsListening(true);
-    const langLabel = selectedLanguage === "ur" ? "Urdu" : selectedLanguage === "hi" ? "Hindi" : selectedLanguage === "en" ? "English" : "Auto";
-    setInputValue(`Listening via JARVIS Engine [${langLabel}]...`);
-
-    const sttLanguage = selectedLanguage === "en" ? "en-US" : selectedLanguage === "hi" ? "hi-IN" : "ur-PK";
-
-    // 1. Try Browser-Native High-Speed Speech Recognition (Chrome / Edge)
-    const SpeechRec = typeof window !== "undefined" 
-      ? ((window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognizer; webkitSpeechRecognition?: new () => BrowserSpeechRecognizer }).SpeechRecognition || 
-         (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognizer; webkitSpeechRecognition?: new () => BrowserSpeechRecognizer }).webkitSpeechRecognition)
-      : null;
-
-    if (SpeechRec) {
-      // Temporarily pause background wake word listener to avoid mic conflicts
-      try { wakeWordRecognitionRef.current?.stop(); } catch {}
-
-      try {
-        const recognizer = new SpeechRec();
-        recognizer.continuous = false;
-        recognizer.interimResults = true;
-        recognizer.lang = sttLanguage;
-
-        let finalTranscript = "";
-
-        recognizer.onresult = (event) => {
-          let interim = "";
-          for (let i = 0; i < event.results.length; i++) {
-            const res = event.results[i];
-            if (res.isFinal || (res as unknown as SpeechResultAlternative[])[0]) {
-              const text = res[0].transcript;
-              if (res.isFinal) {
-                finalTranscript = text;
-              } else {
-                interim += text;
-              }
-            }
-          }
-          if (interim) {
-            setInputValue(interim);
-          }
-        };
-
-        recognizer.onerror = async (err) => {
-          console.warn("Browser SpeechRecognition notice:", err);
-          await fallbackBackendListen(sttLanguage);
-        };
-
-        recognizer.onend = () => {
-          setIsListening(false);
-          // Resume background wake word
-          if (isWakeWordEnabled) {
-            setTimeout(() => {
-              try { wakeWordRecognitionRef.current?.start(); } catch {}
-            }, 600);
-          }
-          if (finalTranscript.trim()) {
-            setInputValue(finalTranscript.trim());
-            handleSend(undefined, finalTranscript.trim());
-          }
-        };
-
-        recognizer.start();
-        return;
-      } catch (e) {
-        console.warn("Native speech start failed, falling back to backend:", e);
-      }
-    }
-
-    // 2. Fallback to Backend Voice Listen API
-    await fallbackBackendListen(sttLanguage);
-  };
-
-  const fallbackBackendListen = async (sttLanguage: string) => {
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/voice/listen?language=${sttLanguage}`, {
-        method: "POST"
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === "timeout" || data.status === "unrecognized") {
-          setInputValue(data.status === "timeout" ? "No speech detected (timeout)..." : "Couldn't catch that clearly. Please try again...");
-          setTimeout(() => setInputValue(""), 3000);
-          return;
-        }
-
-        setInputValue(data.transcript);
-        handleSend(undefined, data.transcript);
-      } else {
-        const err = await response.json();
-        setInputValue(err.detail || "Couldn't catch that. Please check microphone...");
-        setTimeout(() => setInputValue(""), 3500);
-      }
-    } catch {
-      setInputValue("Failed to connect to JARVIS Voice Engine.");
-      setTimeout(() => setInputValue(""), 3000);
-    } finally {
-      setIsListening(false);
-      if (isWakeWordEnabled) {
-        setTimeout(() => {
-          try { wakeWordRecognitionRef.current?.start(); } catch {}
-        }, 600);
-      }
-    }
-  };
-
-  const handleOrbClick = () => {
-    if (isSpeaking) {
-      stopSpeaking();
-    } else {
-      toggleListen();
-    }
-  };
-
   // Push-To-Talk Spacebar shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -914,76 +1187,31 @@ export default function Dashboard() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Stable refs for background wake word listener
-  const handleSendRef = useRef(handleSend);
-  const toggleListenRef = useRef(toggleListen);
-
-  useEffect(() => {
-    handleSendRef.current = handleSend;
-    toggleListenRef.current = toggleListen;
-  });
-
-  // Web Speech API Background Wake Word Listener
+  // Initialize Background Wake Word on load + Microphone permission unlock
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const SpeechRec = (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognizer; webkitSpeechRecognition?: new () => BrowserSpeechRecognizer }).SpeechRecognition || 
-                      (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognizer; webkitSpeechRecognition?: new () => BrowserSpeechRecognizer }).webkitSpeechRecognition;
 
-    if (!SpeechRec) return;
-
-    let recognizer: BrowserSpeechRecognizer | null = null;
-    let isIntentionalStop = false;
-
-    try {
-      recognizer = new SpeechRec();
-      recognizer.continuous = true;
-      recognizer.interimResults = false;
-      recognizer.lang = "en-US";
-
-      recognizer.onresult = (event) => {
-        const results = event.results;
-        for (let i = 0; i < results.length; i++) {
-          const transcript = results[i][0].transcript.toLowerCase().trim();
-          const containsWakeWord = transcript.includes("jarvis") || transcript.includes("hey jarvis") || transcript.includes("suno jarvis");
-
-          if (containsWakeWord && isWakeWordEnabled) {
-            playWakeChime();
-            showNotice("🎙️ Wake word detected: 'Hey JARVIS'!");
-            const stripped = transcript.replace(/^(?:hey|suno|ok|okay)?\s*jarvis\s*[,.]?\s*/i, "").trim();
-            if (stripped.length > 2) {
-              handleSendRef.current(undefined, stripped);
-            } else {
-              toggleListenRef.current();
-            }
-          }
-        }
-      };
-
-      recognizer.onerror = () => {
-        // silent recovery
-      };
-
-      recognizer.onend = () => {
-        if (!isIntentionalStop && isWakeWordEnabled) {
-          setTimeout(() => {
-            try { recognizer?.start(); } catch { /* ignore */ }
-          }, 600);
-        }
-      };
-
-      if (isWakeWordEnabled) {
-        try { recognizer.start(); } catch { /* ignore */ }
+    // Silent microphone permission unlock on first user gesture
+    const handleFirstInteraction = () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => {});
       }
-      wakeWordRecognitionRef.current = recognizer;
-    } catch {
-      // SpeechRec unavailable
-    }
-
-    return () => {
-      isIntentionalStop = true;
-      try { recognizer?.stop(); } catch { /* ignore */ }
+      window.removeEventListener("click", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
     };
-  }, [isWakeWordEnabled]);
+    window.addEventListener("click", handleFirstInteraction);
+    window.addEventListener("keydown", handleFirstInteraction);
+
+    if (isWakeWordEnabledRef.current) {
+      const timer = setTimeout(() => {
+        startWakeWordListeningRef.current();
+      }, 700);
+      return () => {
+        clearTimeout(timer);
+        stopCurrentRecognizer();
+      };
+    }
+  }, []);
 
   const previewVoice = async (lang: "ur" | "en") => {
     const text = lang === "ur" 
@@ -1074,6 +1302,17 @@ export default function Dashboard() {
                   {lang === "ur" ? "UR" : lang === "en" ? "EN" : "AUTO"}
                 </button>
               ))}
+            </div>
+
+            <div className="w-[1px] h-3.5 bg-cyan-500/20 mx-1 hidden md:block" />
+
+            {/* Global System Hotkey Badge (Phase 9 & 10) */}
+            <div 
+              className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/40 text-cyan-300/90 border border-cyan-500/25 shadow-sm"
+              title="Global Windows Summon: Press 'Ctrl + Space' from any app to summon JARVIS"
+            >
+              <Zap size={10} className="text-cyan-400 animate-pulse" />
+              <span>Ctrl+Space</span>
             </div>
           </div>
 
