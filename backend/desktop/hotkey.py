@@ -50,7 +50,7 @@ def default_hotkey_action():
 
 
 def _hotkey_worker(modifier: int, vk: int, callback: Callable):
-    global _is_running
+    global _is_running, _current_hotkey_name
     _is_running = True
 
     # Register message-only window
@@ -72,18 +72,37 @@ def _hotkey_worker(modifier: int, vk: int, callback: Callable):
         0, 0, hinst, None
     )
 
+    # Candidate hotkey combinations with intelligent fallbacks
+    candidates = [
+        (_current_hotkey_name, modifier, vk),
+        ("Ctrl + Shift + J", win32con.MOD_CONTROL | win32con.MOD_SHIFT, ord('J')),
+        ("Alt + Space", win32con.MOD_ALT, win32con.VK_SPACE),
+        ("Ctrl + Alt + J", win32con.MOD_CONTROL | win32con.MOD_ALT, ord('J')),
+        ("Alt + J", win32con.MOD_ALT, ord('J')),
+    ]
+
     # Register the hotkey using Win32 user32.dll
     user32 = ctypes.windll.user32
-    fs_mod = modifier | win32con.MOD_NOREPEAT
-    reg_ok = user32.RegisterHotKey(hwnd, HOTKEY_ID, fs_mod, vk)
-    if not reg_ok:
-        print(f"[Hotkey] Could not register {_current_hotkey_name}. Trying Alt + J fallback...")
-        reg_ok = user32.RegisterHotKey(hwnd, HOTKEY_ID, win32con.MOD_ALT | win32con.MOD_NOREPEAT, ord('J'))
-        if reg_ok:
-            print("[Hotkey] Alt + J registered successfully.")
+    reg_ok = False
+    registered_name = None
+
+    for name, c_mod, c_vk in candidates:
+        fs_mod = c_mod | win32con.MOD_NOREPEAT
+        if user32.RegisterHotKey(hwnd, HOTKEY_ID, fs_mod, c_vk):
+            reg_ok = True
+            registered_name = name
+            _current_hotkey_name = name
+            print(f"[Hotkey] Successfully registered global summon shortcut: {name}")
+            break
+        else:
+            err = ctypes.GetLastError()
+            if err == 1409:
+                print(f"[Hotkey] Notice: {name} is already registered by another process. Trying fallback...")
+            else:
+                print(f"[Hotkey] Notice: Could not register {name} (Error {err}). Trying fallback...")
 
     if not reg_ok:
-        print("[Hotkey] Failed to register any global hotkey.")
+        print("[Hotkey] Warning: All candidate global hotkeys are currently reserved.")
         _is_running = False
         return
 

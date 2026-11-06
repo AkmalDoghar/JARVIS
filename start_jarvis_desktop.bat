@@ -2,7 +2,7 @@
 title JARVIS AI Assistant Desktop Suite
 cd /d %~dp0
 echo ======================================================================
-echo          LAUNCHING JARVIS DESKTOP SUITE (PHASE 9 & 10)
+echo          LAUNCHING JARVIS DESKTOP SUITE (PHASE 9 ^& 10)
 echo ======================================================================
 echo.
 echo Activating virtual environment...

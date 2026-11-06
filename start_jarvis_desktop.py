@@ -79,6 +79,34 @@ def wait_for_port(port: int, max_wait: float = 25.0) -> bool:
         time.sleep(0.5)
     return False
 
+SUPERVISOR_MUTEX = None
+
+def acquire_single_instance_mutex():
+    """
+    Ensure only one instance of the JARVIS Desktop Supervisor runs at a time.
+    If already running, brings the existing window to the foreground and exits.
+    """
+    global SUPERVISOR_MUTEX
+    if os.name != "nt":
+        return True
+    try:
+        import win32event
+        import win32api
+        import winerror
+
+        SUPERVISOR_MUTEX = win32event.CreateMutex(None, False, "Global\\JARVIS_Desktop_Supervisor_Mutex")
+        if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
+            print("[Supervisor] JARVIS Desktop Suite is already active in the background.")
+            print("[Supervisor] Bringing existing JARVIS Desktop window to foreground...")
+            from backend.desktop.window import find_and_focus_jarvis_window, launch_jarvis_app_window
+            if not find_and_focus_jarvis_window():
+                launch_jarvis_app_window("http://localhost:3000")
+            sys.exit(0)
+        return True
+    except Exception as e:
+        print(f"[Supervisor] Mutex notice: {e}")
+        return True
+
 def shutdown():
     print("\n[Launcher] Shutting down JARVIS Desktop System...")
     stop_hotkey_listener()
@@ -99,6 +127,9 @@ def shutdown():
     sys.exit(0)
 
 def main():
+    # 0. Single-instance protection
+    acquire_single_instance_mutex()
+
     print("=" * 65)
     print("  ⚡ JARVIS AI OPERATING SYSTEM - DESKTOP SUITE (PHASE 9 & 10)")
     print("=" * 65)
@@ -128,7 +159,7 @@ def main():
     print("  JARVIS is running in the background!")
     print("  - Taskbar Tray: Look for the glowing Arc Reactor cyan icon.")
     print("  - Global Hotkey: Press 'Ctrl + Space' from any app to summon HUD.")
-    f"  - Auto-start with Windows: {'ENABLED' if is_autostart_enabled() else 'DISABLED'}"
+    print(f"  - Auto-start with Windows: {'ENABLED' if is_autostart_enabled() else 'DISABLED'}")
     print("  Press Ctrl+C in this terminal or right-click Tray icon to Exit.")
     print("=" * 65 + "\n")
 
