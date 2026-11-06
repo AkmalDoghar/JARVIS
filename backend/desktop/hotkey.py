@@ -23,66 +23,29 @@ _stop_event = threading.Event()
 _is_running = False
 _current_hotkey_name = "Ctrl + Space"
 
-# Window search helper for JARVIS Dashboard
+# Window search and summon helper for JARVIS Dashboard
 def find_and_focus_jarvis_window() -> bool:
-    """
-    Search running top-level windows for JARVIS Dashboard and bring it to foreground.
-    """
-    found_hwnd = None
-
-    def enum_windows_callback(hwnd, extra):
-        nonlocal found_hwnd
-        if win32gui.IsWindowVisible(hwnd):
-            title = win32gui.GetWindowText(hwnd).strip()
-            # Match common dashboard window titles
-            if any(k in title.lower() for k in ("jarvis", "localhost:3000", "3000")):
-                found_hwnd = hwnd
-                return False
-        return True
-
-    try:
-        win32gui.EnumWindows(enum_windows_callback, None)
-    except Exception:
-        pass
-
-    if found_hwnd:
-        try:
-            # Restore if minimized
-            if win32gui.IsIconic(found_hwnd):
-                win32gui.ShowWindow(found_hwnd, win32con.SW_RESTORE)
-            else:
-                win32gui.ShowWindow(found_hwnd, win32con.SW_SHOW)
-
-            # Bring to front
-            win32gui.SetForegroundWindow(found_hwnd)
-            return True
-        except Exception as e:
-            print(f"[Hotkey] Window focus notice: {e}")
-
-    # If window not found, open the URL in default browser
-    try:
-        webbrowser.open("http://localhost:3000")
-        return True
-    except Exception as e:
-        print(f"[Hotkey] Failed to open browser: {e}")
-        return False
+    """Delegate to dedicated window manager."""
+    from backend.desktop.window import find_and_focus_jarvis_window as _focus
+    return _focus()
 
 
 def default_hotkey_action():
     """Default action executed when global hotkey is pressed."""
     print("[Hotkey] Global Hotkey triggered! Summoning JARVIS HUD...")
-    # 1. Bring window to front
-    find_and_focus_jarvis_window()
+    from backend.desktop.window import find_and_focus_jarvis_window as _focus, launch_jarvis_app_window
+    if not _focus():
+        launch_jarvis_app_window()
 
-    # 2. Play subtle sci-fi activation chime in a quick thread
+    # Play subtle sci-fi activation chime in a quick thread
     def _play():
         try:
             import pygame
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
-            # If a custom wav or chime exists, play it
         except Exception:
             pass
+    threading.Thread(target=_play, daemon=True).start()
     threading.Thread(target=_play, daemon=True).start()
 
 

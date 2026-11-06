@@ -22,6 +22,13 @@ from backend.desktop.tray import (
     stop_tray_app
 )
 
+from backend.desktop.window import (
+    launch_jarvis_app_window,
+    is_app_mode_supported,
+    get_browser_app_executable,
+    find_and_focus_jarvis_window
+)
+
 __all__ = [
     "get_icon_path",
     "generate_arc_reactor_icon",
@@ -33,6 +40,9 @@ __all__ = [
     "stop_hotkey_listener",
     "get_hotkey_status",
     "find_and_focus_jarvis_window",
+    "launch_jarvis_app_window",
+    "is_app_mode_supported",
+    "get_browser_app_executable",
     "JarvisSystemTray",
     "get_tray_instance",
     "start_tray_app",

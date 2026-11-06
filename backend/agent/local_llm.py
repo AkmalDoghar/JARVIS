@@ -147,3 +147,4 @@ def get_local_openai_client(base_url: str, timeout: float = 20.0) -> OpenAI:
         timeout=timeout,
         max_retries=1
     )
+

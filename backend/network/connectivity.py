@@ -177,3 +177,4 @@ def get_network_status(force_refresh: bool = False) -> Dict[str, Any]:
         "timestamp": time.time(),
         "probe_targets": [t[0] for t in DNS_PROBE_TARGETS]
     }
+

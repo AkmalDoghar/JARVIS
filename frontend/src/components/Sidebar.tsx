@@ -21,6 +21,8 @@ export interface SidebarProps {
   onToggleContinuous: () => void;
   systemMetrics: { cpu: number; ram: number; ramUsed: number; ramTotal: number };
   activeTimersCount: number;
+  autostartEnabled?: boolean;
+  onToggleAutostart?: () => void;
   onOpenTimerCreator?: () => void;
   onFocusChatInput?: () => void;
   activeTab?: string;
@@ -53,6 +55,8 @@ export function Sidebar({
   isContinuousConversation,
   systemMetrics,
   activeTimersCount,
+  autostartEnabled = false,
+  onToggleAutostart,
   onOpenTimerCreator,
   onFocusChatInput,
   activeTab = "dashboard",
@@ -340,6 +344,37 @@ export function Sidebar({
           )}
         </button>
       </div>
+
+      {/* 2B. WINDOWS DESKTOP OS INTEGRATION CARD */}
+      {!isCollapsed && (
+        <div className="mx-3 mt-1.5 mb-1 p-2 rounded-xl bg-[#07132B]/80 border border-cyan-500/20 text-xs font-mono shadow-sm">
+          <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-cyan-400 font-bold mb-1">
+            <span>WINDOWS SYSTEM</span>
+            <span className="text-[8px] px-1 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">DESKTOP APP</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 py-0.5">
+            <span className="text-slate-300 text-[10px]">Start with Windows</span>
+            <button
+              type="button"
+              onClick={onToggleAutostart}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                autostartEnabled
+                  ? "bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                  : "bg-slate-800 border-slate-600 text-slate-400 hover:text-white"
+              }`}
+              title="Toggle Start JARVIS on Windows Boot"
+            >
+              {autostartEnabled ? "ENABLED" : "DISABLED"}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between text-[9px] text-slate-400 pt-1 border-t border-cyan-500/10 mt-1">
+            <span>Global Hotkey</span>
+            <span className="text-cyan-300 font-bold">Ctrl + Space</span>
+          </div>
+        </div>
+      )}
 
       {/* 3. NAVIGATION MODULES LIST */}
       <nav className="flex-1 overflow-y-auto px-2.5 py-3 flex flex-col gap-4 custom-scrollbar">

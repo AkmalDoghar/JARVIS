@@ -151,6 +151,43 @@ export default function Dashboard() {
     }
   };
 
+  // Phase 9 & 10: Windows Desktop & AutoStart Integration State
+  const [desktopStatus, setDesktopStatus] = useState<{
+    autostart?: { enabled: boolean };
+    hotkey?: { running: boolean; current_hotkey: string };
+  } | null>(null);
+
+  const fetchDesktopStatus = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/desktop/status");
+      if (res.ok) {
+        const data = await res.json();
+        setDesktopStatus(data);
+      }
+    } catch {
+      // Backend not running
+    }
+  };
+
+  const toggleAutostart = async () => {
+    const nextState = !desktopStatus?.autostart?.enabled;
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/desktop/autostart/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: nextState })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDesktopStatus(prev => prev ? { ...prev, autostart: data.autostart } : null);
+        setVoiceNotice(nextState ? "🚀 Start with Windows Enabled!" : "🛑 Start with Windows Disabled");
+        setTimeout(() => setVoiceNotice(null), 3000);
+      }
+    } catch (e) {
+      console.error("Failed to toggle autostart", e);
+    }
+  };
+
   // Synchronized Engine Refs (prevents state-closure race conditions in async voice recognizers)
   const isListeningRef = useRef(false);
   const isSpeakingRef = useRef(false);
@@ -1246,12 +1283,16 @@ export default function Dashboard() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Phase 11: Real-time Network Telemetry Polling (every 10s)
+  // Phase 9, 10 & 11: Real-time Network & Desktop Telemetry Polling (every 10s)
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchNetworkStatus();
+      fetchDesktopStatus();
     }, 100);
-    const interval = setInterval(fetchNetworkStatus, 10000);
+    const interval = setInterval(() => {
+      fetchNetworkStatus();
+      fetchDesktopStatus();
+    }, 10000);
     return () => {
       clearTimeout(timer);
       clearInterval(interval);
@@ -1595,6 +1636,8 @@ export default function Dashboard() {
               onToggleContinuous={toggleContinuousConversation}
               systemMetrics={systemMetrics}
               activeTimersCount={activeTimers.length + activeAlarms.length + activeReminders.length}
+              autostartEnabled={Boolean(desktopStatus?.autostart?.enabled)}
+              onToggleAutostart={toggleAutostart}
               onOpenTimerCreator={() => {
                 openHudModal("timers");
                 setShowTimerCreator(true);

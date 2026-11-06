@@ -85,7 +85,9 @@ class JarvisSystemTray:
 
     def _handle_command(self, cmd_id: int):
         if cmd_id == CMD_OPEN_DASHBOARD:
-            find_and_focus_jarvis_window()
+            from backend.desktop.window import find_and_focus_jarvis_window as _focus, launch_jarvis_app_window
+            if not _focus():
+                launch_jarvis_app_window()
         elif cmd_id == CMD_TOGGLE_WAKE_WORD:
             self._wake_word_enabled = not self._wake_word_enabled
             try:
@@ -114,7 +116,9 @@ class JarvisSystemTray:
     def _wnd_proc(self, hwnd, msg, wparam, lparam):
         if msg == WM_TRAY_MESSAGE:
             if lparam in (win32con.WM_LBUTTONUP, win32con.WM_LBUTTONDBLCLK):
-                find_and_focus_jarvis_window()
+                from backend.desktop.window import find_and_focus_jarvis_window as _focus, launch_jarvis_app_window
+                if not _focus():
+                    launch_jarvis_app_window()
             elif lparam == win32con.WM_RBUTTONUP:
                 self._show_context_menu()
             return 0

@@ -113,6 +113,24 @@ class TestPhase9And10Desktop(unittest.TestCase):
         except Exception as e:
             print(f"  [SKIP] Test 5: Live backend not reachable ({e}). Standalone logic passes.")
 
+    def test_06_native_desktop_window_support(self):
+        """Verify Chromium standalone app runner detection and window helpers."""
+        from backend.desktop.window import (
+            is_app_mode_supported,
+            get_browser_app_executable,
+            find_and_focus_jarvis_window
+        )
+        supported = is_app_mode_supported()
+        self.assertTrue(supported, "Edge or Chrome executable should be found on Windows.")
+        exe = get_browser_app_executable()
+        self.assertIsNotNone(exe)
+        self.assertTrue(os.path.exists(exe))
+
+        # Window focus helper should safely return a bool without crashing
+        res = find_and_focus_jarvis_window()
+        self.assertIsInstance(res, bool)
+        print("  [PASS] Test 6: Native Chromium Desktop App Mode support verified.")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -65,6 +65,20 @@ def start_frontend():
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     )
 
+def wait_for_port(port: int, max_wait: float = 25.0) -> bool:
+    import socket
+    start_t = time.time()
+    while time.time() - start_t < max_wait:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                if s.connect_ex(('127.0.0.1', port)) == 0:
+                    return True
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return False
+
 def shutdown():
     print("\n[Launcher] Shutting down JARVIS Desktop System...")
     stop_hotkey_listener()
@@ -93,21 +107,22 @@ def main():
     start_backend()
     start_frontend()
 
-    # 2. Wait 2 seconds for services to initialize
-    time.sleep(2)
-
-    # 3. Start Global System-Wide Hotkey (Ctrl + Space)
+    # 2. Start Global System-Wide Hotkey (Ctrl + Space)
     print("[Launcher] Initializing Global Hotkey (Ctrl + Space)...")
     start_hotkey_listener("ctrl_space")
 
-    # 4. Start Windows System Tray Icon
+    # 3. Start Windows System Tray Icon
     print("[Launcher] Mounting Arc Reactor Icon to Windows System Tray...")
     start_tray_app()
 
-    # 5. Open Dashboard in Browser
-    time.sleep(1)
-    print("[Launcher] Opening JARVIS HUD Dashboard...")
-    webbrowser.open("http://localhost:3000")
+    # 4. Wait for Next.js Frontend service to be ready before popping window
+    print("[Launcher] Waiting for JARVIS Desktop UI on http://localhost:3000 ...")
+    wait_for_port(3000, max_wait=25.0)
+
+    # 5. Open Dedicated Native Desktop App Window (No browser tabs or address bar)
+    print("[Launcher] Launching dedicated standalone JARVIS Desktop Window...")
+    from backend.desktop.window import launch_jarvis_app_window
+    launch_jarvis_app_window("http://localhost:3000")
 
     print("\n" + "=" * 65)
     print("  JARVIS is running in the background!")

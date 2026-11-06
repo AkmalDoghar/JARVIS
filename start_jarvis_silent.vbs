@@ -1,21 +1,25 @@
 ' ======================================================================
 ' JARVIS AI ASSISTANT - SILENT BACKGROUND BOOTSTRAPPER (Phase 10)
-' Launches JARVIS completely hidden with no flashing command prompts.
+' Launches JARVIS Master Desktop Suite completely hidden on Windows boot
+' with NO console windows or flashing command prompts.
 ' ======================================================================
 Option Explicit
-Dim FSO, WshShell, ScriptDir, BatPath
+Dim FSO, WshShell, ScriptDir, PythonwPath, DesktopScript
 
 Set FSO = CreateObject("Scripting.FileSystemObject")
 ScriptDir = FSO.GetParentFolderName(WScript.ScriptFullName)
-BatPath = ScriptDir & "\start_jarvis_all.bat"
+PythonwPath = ScriptDir & "\.venv\Scripts\pythonw.exe"
+DesktopScript = ScriptDir & "\start_jarvis_desktop.py"
 
-If FSO.FileExists(BatPath) Then
-    Set WshShell = CreateObject("WScript.Shell")
-    WshShell.CurrentDirectory = ScriptDir
-    ' Run hidden (window style 0, do not wait for completion)
-    WshShell.Run Chr(34) & BatPath & Chr(34), 0, False
-    Set WshShell = Nothing
+If Not FSO.FileExists(PythonwPath) Then
+    PythonwPath = "pythonw.exe"
 End If
 
-Set FSO = Nothing
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.CurrentDirectory = ScriptDir
 
+' Run completely hidden in the background (0 = hide window, False = don't wait)
+WshShell.Run Chr(34) & PythonwPath & Chr(34) & " " & Chr(34) & DesktopScript & Chr(34), 0, False
+
+Set WshShell = Nothing
+Set FSO = Nothing
