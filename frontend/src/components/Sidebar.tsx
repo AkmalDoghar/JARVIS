@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import {
   Home, MessageSquare, Mic, ShieldCheck, Cpu, FolderGit2,
   Globe, Timer, BrainCircuit, Zap, Terminal, ChevronLeft,
@@ -240,14 +241,18 @@ export function Sidebar({
           {/* 3D Arc Reactor Mini Brand Icon */}
           <div
             onClick={() => handleNavClick("dashboard")}
-            className="relative w-10 h-10 flex items-center justify-center shrink-0 cursor-pointer group"
+            className="relative w-11 h-11 flex items-center justify-center shrink-0 cursor-pointer group"
             title="JARVIS Mark IX Arc Core - Dashboard"
           >
             <div className="absolute inset-0 rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-950/80 to-blue-950/60 shadow-[0_0_15px_rgba(6,182,212,0.4)_inset] group-hover:border-cyan-300 transition-colors" />
-            <div className="absolute inset-1 rounded-lg border border-dashed border-cyan-400/40 animate-[spin_10s_linear_infinite]" />
-            <div className="relative w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-cyan-300 to-white shadow-[0_0_12px_#22d3ee] flex items-center justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-900 animate-ping" />
-            </div>
+            <Image
+              src="/icon-192.png"
+              alt="JARVIS Arc Core"
+              width={32}
+              height={32}
+              priority
+              className="relative w-8 h-8 rounded-full object-contain drop-shadow-[0_0_10px_rgba(0,240,255,0.8)] group-hover:scale-110 transition-transform duration-300"
+            />
           </div>
 
           {!isCollapsed && (

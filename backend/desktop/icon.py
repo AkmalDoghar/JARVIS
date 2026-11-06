@@ -1,77 +1,14 @@
 """
 JARVIS Arc Reactor Icon Generator (Phase 9 & 10)
-Generates high-resolution multi-size Windows .ico files dynamically
-using Pillow with Iron Man Arc Reactor styling.
+Provides ultra-high resolution, multi-tier Windows .ico and PNG icons
+featuring the authentic Mark 85 / Bleeding Edge Arc Reactor Core emblem.
 """
 
 import os
-from PIL import Image, ImageDraw
+from PIL import Image
 
 ICON_PATH = os.path.join(os.path.dirname(__file__), "jarvis.ico")
-
-def generate_arc_reactor_icon(target_path: str = ICON_PATH) -> str:
-    """
-    Generate a sleek, futuristic cyan Arc Reactor icon and save as a multi-resolution Windows .ico.
-    """
-    sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128)]
-    images = []
-
-    for width, height in sizes:
-        # Transparent canvas
-        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-
-        # Scale factor relative to 64x64 baseline
-        scale = width / 64.0
-
-        # 1. Outer Dark Halo Ring
-        margin = int(2 * scale)
-        draw.ellipse(
-            [margin, margin, width - margin, height - margin],
-            fill=(2, 6, 23, 240), # Dark slate navy #020617
-            outline=(6, 182, 212, 255), # Cyan border
-            width=max(1, int(2 * scale))
-        )
-
-        # 2. Glowing Inner Concentric Ring
-        inner_m = int(10 * scale)
-        draw.ellipse(
-            [inner_m, inner_m, width - inner_m, height - inner_m],
-            outline=(34, 211, 238, 220), # Electric cyan #22d3ee
-            width=max(1, int(2 * scale))
-        )
-
-        # 3. Arc Reactor Slices (3 radial ticks)
-        center_x = width // 2
-        center_y = height // 2
-        tick_len = int(6 * scale)
-        
-        # 4. Central Glowing Core
-        core_m = int(22 * scale)
-        draw.ellipse(
-            [core_m, core_m, width - core_m, height - core_m],
-            fill=(56, 189, 248, 255), # Vibrant Sky Blue
-            outline=(255, 255, 255, 255), # White hot center
-            width=max(1, int(1 * scale))
-        )
-
-        # 5. Pure white center spark
-        spark_m = int(27 * scale)
-        draw.ellipse(
-            [spark_m, spark_m, width - spark_m, height - spark_m],
-            fill=(255, 255, 255, 255)
-        )
-
-        images.append(img)
-
-    # Save primary 64x64 image with all lower and higher resolutions embedded
-    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-    images[-1].save(
-        target_path,
-        format="ICO",
-        sizes=[(s[0], s[1]) for s in sizes]
-    )
-    return target_path
+MASTER_LOGO_PNG = os.path.join(os.path.dirname(__file__), "jarvis_logo.png")
 
 def get_icon_path() -> str:
     """Ensure icon exists on disk and return its absolute path."""
@@ -79,7 +16,32 @@ def get_icon_path() -> str:
         generate_arc_reactor_icon(ICON_PATH)
     return ICON_PATH
 
+def generate_arc_reactor_icon(target_path: str = ICON_PATH) -> str:
+    """
+    Generate or export the high-definition multi-resolution Windows .ico file.
+    Embedded mipmap sizes: 16x16, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256.
+    """
+    sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+    
+    if os.path.exists(MASTER_LOGO_PNG):
+        base_img = Image.open(MASTER_LOGO_PNG).convert("RGBA")
+    else:
+        # Fallback: if master png is not found, load from padded scratch or create
+        from PIL import ImageDraw
+        base_img = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+        d = ImageDraw.Draw(base_img)
+        d.ellipse([8, 8, 248, 248], fill=(3, 7, 18, 255), outline=(0, 240, 255, 255), width=8)
+
+    ico_images = [base_img.resize(s, Image.Resampling.LANCZOS) for s in sizes]
+    
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    ico_images[-1].save(
+        target_path,
+        format="ICO",
+        sizes=[(s[0], s[1]) for s in sizes]
+    )
+    return target_path
+
 if __name__ == "__main__":
     path = generate_arc_reactor_icon()
-    print(f"Arc Reactor Icon created at: {path}")
-
+    print(f"Arc Reactor Icon verified at: {path}")
