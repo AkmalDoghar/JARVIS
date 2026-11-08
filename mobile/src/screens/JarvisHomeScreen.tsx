@@ -6,7 +6,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { SafeNative } from '../services/safeNativeModules';
 import {
   AssistantState,
   ContactItem,
@@ -72,13 +72,18 @@ export const JarvisHomeScreen: React.FC = () => {
       );
     }, 1000);
 
-    if (isBikeMode) {
-      activateKeepAwakeAsync().catch(() => {});
+    const KeepAwake = SafeNative.KeepAwake;
+    if (isBikeMode && KeepAwake && typeof KeepAwake.activateKeepAwakeAsync === 'function') {
+      KeepAwake.activateKeepAwakeAsync().catch(() => {});
     }
 
     return () => {
       clearInterval(timer);
-      deactivateKeepAwake();
+      if (KeepAwake && typeof KeepAwake.deactivateKeepAwake === 'function') {
+        try {
+          KeepAwake.deactivateKeepAwake();
+        } catch (e) {}
+      }
     };
   }, [isBikeMode]);
 

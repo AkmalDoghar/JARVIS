@@ -10,3 +10,4 @@ echo (This creates an installable .apk file that works without PC or Wi-Fi)
 echo.
 npx eas-cli build -p android --profile preview
 pause
+

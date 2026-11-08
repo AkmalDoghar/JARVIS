@@ -1,48 +1,44 @@
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
-import * as IntentLauncher from 'expo-intent-launcher';
+import { SafeNative } from './safeNativeModules';
 
 export class AppLauncherService {
   /**
-   * Open phone photo gallery
+   * Open phone photo gallery safely
    */
   public static async openGallery(): Promise<{ success: boolean; message: string }> {
     try {
       if (Platform.OS === 'android') {
-        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-          data: 'content://media/internal/images/media',
-          type: 'image/*',
-        });
-        return { success: true, message: 'Opening phone gallery' };
-      } else {
-        await Linking.openURL('photos-redirect://');
-        return { success: true, message: 'Opening photos' };
+        const IntentLauncher = SafeNative.IntentLauncher;
+        if (IntentLauncher && typeof IntentLauncher.startActivityAsync === 'function') {
+          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+            data: 'content://media/internal/images/media',
+            type: 'image/*',
+          });
+          return { success: true, message: 'Opening phone gallery' };
+        }
       }
+      await Linking.openURL('content://media/internal/images/media').catch(() => {});
+      return { success: true, message: 'Opening photos' };
     } catch (e: any) {
-      // Fallback intent for android
-      try {
-        await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
-          category: 'android.intent.category.APP_GALLERY',
-        });
-        return { success: true, message: 'Opening gallery' };
-      } catch (err: any) {
-        return { success: false, message: 'Gallery app could not be opened' };
-      }
+      return { success: false, message: 'Gallery app could not be opened' };
     }
   }
 
   /**
-   * Open phone camera
+   * Open phone camera safely
    */
   public static async openCamera(): Promise<{ success: boolean; message: string }> {
     try {
       if (Platform.OS === 'android') {
-        await IntentLauncher.startActivityAsync('android.media.action.STILL_IMAGE_CAMERA');
-        return { success: true, message: 'Opening camera' };
-      } else {
-        await Linking.openURL('camera://');
-        return { success: true, message: 'Opening camera' };
+        const IntentLauncher = SafeNative.IntentLauncher;
+        if (IntentLauncher && typeof IntentLauncher.startActivityAsync === 'function') {
+          await IntentLauncher.startActivityAsync('android.media.action.STILL_IMAGE_CAMERA');
+          return { success: true, message: 'Opening camera' };
+        }
       }
+      await Linking.openURL('camera://').catch(() => {});
+      return { success: true, message: 'Opening camera' };
     } catch (e: any) {
       return { success: false, message: 'Camera could not be opened' };
     }

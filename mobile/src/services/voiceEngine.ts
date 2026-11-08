@@ -1,5 +1,5 @@
-import * as Speech from 'expo-speech';
-import { ParsedCommand, VoiceCommandType } from '../types';
+import { ParsedCommand } from '../types';
+import { SafeNative } from './safeNativeModules';
 
 export class VoiceEngine {
   private static isSpeaking: boolean = false;
@@ -10,22 +10,31 @@ export class VoiceEngine {
   public static async speak(text: string, onDone?: () => void): Promise<void> {
     try {
       this.isSpeaking = true;
-      Speech.stop();
-      Speech.speak(text, {
-        language: 'en-GB', // JARVIS British accent default
-        pitch: 0.95,
-        rate: 0.98,
-        onDone: () => {
+      const Speech = SafeNative.Speech;
+      if (Speech && typeof Speech.speak === 'function') {
+        Speech.stop();
+        Speech.speak(text, {
+          language: 'en-GB', // JARVIS British accent default
+          pitch: 0.95,
+          rate: 0.98,
+          onDone: () => {
+            this.isSpeaking = false;
+            if (onDone) onDone();
+          },
+          onError: () => {
+            this.isSpeaking = false;
+            if (onDone) onDone();
+          },
+        });
+      } else {
+        // Fallback: wait 1.5s then trigger onDone
+        setTimeout(() => {
           this.isSpeaking = false;
           if (onDone) onDone();
-        },
-        onError: () => {
-          this.isSpeaking = false;
-          if (onDone) onDone();
-        },
-      });
+        }, 1200);
+      }
     } catch (e) {
-      console.warn('Speech synthesis error:', e);
+      console.warn('[VoiceEngine] Speech synthesis error:', e);
       this.isSpeaking = false;
       if (onDone) onDone();
     }
@@ -33,7 +42,10 @@ export class VoiceEngine {
 
   public static stopSpeaking(): void {
     try {
-      Speech.stop();
+      const Speech = SafeNative.Speech;
+      if (Speech && typeof Speech.stop === 'function') {
+        Speech.stop();
+      }
       this.isSpeaking = false;
     } catch (e) {
       // ignore
@@ -136,7 +148,6 @@ export class VoiceEngine {
         text.includes('milao') ||
         text.includes('ring');
 
-      // Extract target contact name from "whatsapp per [name] ko message/call"
       let target = '';
       const nameMatch = text.match(
         /(?:whatsapp\s+(?:per|pe)?\s*([a-zA-Z0-9\s]+?)\s*(?:ko|call|message|msg))/i
@@ -144,7 +155,6 @@ export class VoiceEngine {
       if (nameMatch && nameMatch[1]) {
         target = nameMatch[1].replace(/call|message|msg|ko/g, '').trim();
       } else {
-        // Fallback: "whatsapp call ali" or "whatsapp message hamza"
         const clean = text.replace(/whatsapp|whatsap|call|message|msg|per|pe|ko/gi, '').trim();
         target = clean;
       }
@@ -164,10 +174,6 @@ export class VoiceEngine {
       text.includes('mila do') ||
       text.includes('dial')
     ) {
-      // Extract target contact name
-      // e.g. "ali ko call milao" -> ali
-      // e.g. "call ali" -> ali
-      // e.g. "bhai ko phone lagao" -> bhai
       let target = text
         .replace(/(?:ko\s*)?(?:call\s*milao|call\s*kro|call\s*karo|phone\s*karo|phone\s*milao|call|phone|dial|mila\s*do)/gi, '')
         .replace(/^(?:jarvis|hey jarvis|mr jarvis)\s*/gi, '')
@@ -206,4 +212,3 @@ export class VoiceEngine {
     return { type: 'UNKNOWN', rawText: raw };
   }
 }
-

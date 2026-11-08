@@ -1,7 +1,7 @@
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
-import * as IntentLauncher from 'expo-intent-launcher';
 import { ContactItem } from '../types';
+import { SafeNative } from './safeNativeModules';
 
 export class PhoneService {
   /**
@@ -10,7 +10,6 @@ export class PhoneService {
   public static async makeCall(target: ContactItem | string): Promise<{ success: boolean; message: string }> {
     try {
       let phoneNumber = typeof target === 'string' ? target : target.primaryNumber;
-      // Clean phone number
       phoneNumber = phoneNumber.replace(/[^0-9+]/g, '');
 
       if (!phoneNumber) {
@@ -27,12 +26,14 @@ export class PhoneService {
           message: `Dialing ${typeof target === 'string' ? phoneNumber : target.name} (${phoneNumber})`,
         };
       } else {
-        // Fallback for Android using IntentLauncher
         if (Platform.OS === 'android') {
-          await IntentLauncher.startActivityAsync('android.intent.action.DIAL', {
-            data: url,
-          });
-          return { success: true, message: `Opened dialer for ${phoneNumber}` };
+          const IntentLauncher = SafeNative.IntentLauncher;
+          if (IntentLauncher && typeof IntentLauncher.startActivityAsync === 'function') {
+            await IntentLauncher.startActivityAsync('android.intent.action.DIAL', {
+              data: url,
+            });
+            return { success: true, message: `Opened dialer for ${phoneNumber}` };
+          }
         }
         return { success: false, message: 'Device does not support calling' };
       }
@@ -48,11 +49,13 @@ export class PhoneService {
   public static async endCall(): Promise<{ success: boolean; message: string }> {
     try {
       if (Platform.OS === 'android') {
-        // Bring home screen / close in-call screen
-        await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
-          category: 'android.intent.category.HOME',
-        });
-        return { success: true, message: 'Call dismissed. Returned to JARVIS HUD.' };
+        const IntentLauncher = SafeNative.IntentLauncher;
+        if (IntentLauncher && typeof IntentLauncher.startActivityAsync === 'function') {
+          await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
+            category: 'android.intent.category.HOME',
+          });
+          return { success: true, message: 'Call dismissed. Returned to JARVIS HUD.' };
+        }
       }
       return { success: true, message: 'Call disconnected.' };
     } catch (e: any) {

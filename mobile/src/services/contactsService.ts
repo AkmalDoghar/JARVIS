@@ -1,53 +1,54 @@
-import * as Contacts from 'expo-contacts';
 import { ContactItem } from '../types';
+import { SafeNative } from './safeNativeModules';
 
 export class ContactsService {
   private static cachedContacts: ContactItem[] = [];
 
   /**
-   * Request contacts permission and fetch phone contacts
+   * Request contacts permission and fetch phone contacts safely
    */
   public static async loadContacts(): Promise<ContactItem[]> {
     try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.warn('Contacts permission not granted');
-        return this.getDefaultContacts();
-      }
+      const Contacts = SafeNative.Contacts;
+      if (Contacts && typeof Contacts.requestPermissionsAsync === 'function') {
+        const { status } = await Contacts.requestPermissionsAsync();
+        if (status === 'granted') {
+          const { data } = await Contacts.getContactsAsync({
+            fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
+          });
 
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
-      });
+          if (data && data.length > 0) {
+            const list: ContactItem[] = [];
+            for (const c of data) {
+              if (c.name && c.phoneNumbers && c.phoneNumbers.length > 0) {
+                const numbers = c.phoneNumbers
+                  .filter((p: any) => !!p.number)
+                  .map((p: any) => ({
+                    number: (p.number || '').replace(/\s+/g, ''),
+                    label: p.label || 'Mobile',
+                  }));
 
-      if (!data || data.length === 0) {
-        return this.getDefaultContacts();
-      }
+                if (numbers.length > 0) {
+                  list.push({
+                    id: c.id,
+                    name: c.name,
+                    phoneNumbers: numbers,
+                    primaryNumber: numbers[0].number,
+                  });
+                }
+              }
+            }
 
-      const list: ContactItem[] = [];
-      for (const c of data) {
-        if (c.name && c.phoneNumbers && c.phoneNumbers.length > 0) {
-          const numbers = c.phoneNumbers
-            .filter(p => !!p.number)
-            .map(p => ({
-              number: (p.number || '').replace(/\s+/g, ''),
-              label: p.label || 'Mobile',
-            }));
-
-          if (numbers.length > 0) {
-            list.push({
-              id: c.id,
-              name: c.name,
-              phoneNumbers: numbers,
-              primaryNumber: numbers[0].number,
-            });
+            if (list.length > 0) {
+              this.cachedContacts = list;
+              return list;
+            }
           }
         }
       }
-
-      this.cachedContacts = list;
-      return list;
+      return this.getDefaultContacts();
     } catch (e) {
-      console.warn('Error loading contacts:', e);
+      console.warn('[ContactsService] Error loading contacts:', e);
       return this.getDefaultContacts();
     }
   }
@@ -104,24 +105,23 @@ export class ContactsService {
     }
 
     // 1. Exact or starts-with match
-    const exact = this.cachedContacts.find(c => c.name.toLowerCase() === q);
+    const exact = this.cachedContacts.find((c) => c.name.toLowerCase() === q);
     if (exact) return exact;
 
-    const startsWith = this.cachedContacts.find(c => c.name.toLowerCase().startsWith(q));
+    const startsWith = this.cachedContacts.find((c) => c.name.toLowerCase().startsWith(q));
     if (startsWith) return startsWith;
 
     // 2. Partial substring match
-    const contains = this.cachedContacts.find(c => c.name.toLowerCase().includes(q));
+    const contains = this.cachedContacts.find((c) => c.name.toLowerCase().includes(q));
     if (contains) return contains;
 
-    // 3. Multi-word match (e.g. query "ali" matches "Ali Raza")
-    const wordMatch = this.cachedContacts.find(c => {
+    // 3. Multi-word match
+    const wordMatch = this.cachedContacts.find((c) => {
       const parts = c.name.toLowerCase().split(/\s+/);
-      return parts.some(p => p.includes(q) || q.includes(p));
+      return parts.some((p) => p.includes(q) || q.includes(p));
     });
     if (wordMatch) return wordMatch;
 
     return null;
   }
 }
-
