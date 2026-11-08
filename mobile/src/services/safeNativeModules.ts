@@ -91,3 +91,4 @@ export const SafeNative = {
     return HapticsModule;
   },
 };
+

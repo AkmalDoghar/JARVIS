@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ContactItem } from '../types';
-import * as Haptics from 'expo-haptics';
+import { SafeNative } from '../services/safeNativeModules';
 
 interface Props {
   contacts: ContactItem[];
@@ -13,50 +13,58 @@ interface Props {
 export const ContactsQuickDial: React.FC<Props> = ({ contacts, onCall, onWhatsApp }) => {
   const triggerHaptic = (fn: () => void) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {
-      // ignore
-    }
+      const Haptics = SafeNative.Haptics;
+      if (Haptics && typeof Haptics.impactAsync === 'function') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (e) {}
     fn();
   };
 
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <MaterialCommunityIcons name="card-account-phone-outline" size={16} color="#00f0ff" />
-          <Text style={styles.headerText}>VOICE DIAL & WHATSAPP</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.titleGroup}>
+          <MaterialCommunityIcons name="satellite-variant" size={14} color="#00ffaa" />
+          <Text style={styles.headerText}>NEURAL COMMS LINK</Text>
         </View>
-        <Text style={styles.hintText}>"Ali ko call milao"</Text>
+        <Text style={styles.subHint}>"Ali ko call milao"</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollList}
+      >
         {contacts.map((contact) => (
-          <View key={contact.id} style={styles.contactItem}>
-            <View style={styles.avatar}>
+          <View key={contact.id} style={styles.contactPod}>
+            {/* Glowing Avatar */}
+            <View style={styles.avatarOrb}>
               <Text style={styles.avatarLetter}>
                 {contact.name.charAt(0).toUpperCase()}
               </Text>
             </View>
+
             <Text style={styles.contactName} numberOfLines={1}>
               {contact.name}
             </Text>
-            <Text style={styles.contactNumber} numberOfLines={1}>
+            <Text style={styles.contactPhone} numberOfLines={1}>
               {contact.primaryNumber}
             </Text>
 
+            {/* Comms Action Buttons */}
             <View style={styles.actionRow}>
-              {/* Phone Call */}
+              {/* Cellular Call */}
               <TouchableOpacity
-                style={styles.callBtn}
+                style={styles.callOrb}
                 onPress={() => triggerHaptic(() => onCall(contact))}
               >
                 <MaterialCommunityIcons name="phone" size={16} color="#ffffff" />
               </TouchableOpacity>
 
-              {/* WhatsApp */}
+              {/* WhatsApp Call / Msg */}
               <TouchableOpacity
-                style={styles.waBtn}
+                style={styles.waOrb}
                 onPress={() => triggerHaptic(() => onWhatsApp(contact))}
               >
                 <MaterialCommunityIcons name="whatsapp" size={16} color="#ffffff" />
@@ -71,74 +79,85 @@ export const ContactsQuickDial: React.FC<Props> = ({ contacts, onCall, onWhatsAp
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(10, 20, 35, 0.85)',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.25)',
+    backgroundColor: 'rgba(3, 7, 18, 0.88)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 255, 170, 0.28)',
     padding: 14,
     marginHorizontal: 16,
     marginVertical: 6,
+    shadowColor: '#00ffaa',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 6,
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  titleRow: {
+  titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   headerText: {
-    color: '#00f0ff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-  },
-  hintText: {
-    color: '#64748b',
+    color: '#00ffaa',
     fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    fontFamily: 'monospace',
+  },
+  subHint: {
+    color: '#64748b',
+    fontSize: 9,
     fontStyle: 'italic',
   },
-  scroll: {
+  scrollList: {
     flexDirection: 'row',
     gap: 10,
+    paddingVertical: 2,
   },
-  contactItem: {
-    width: 110,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 14,
+  contactPod: {
+    width: 114,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     padding: 10,
     alignItems: 'center',
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0, 240, 255, 0.15)',
-    borderWidth: 1,
+  avatarOrb: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0, 240, 255, 0.12)',
+    borderWidth: 1.5,
     borderColor: '#00f0ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
+    shadowColor: '#00f0ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 6,
   },
   avatarLetter: {
     color: '#00f0ff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   contactName: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
     width: '100%',
   },
-  contactNumber: {
-    color: '#94a3b8',
+  contactPhone: {
+    color: '#64748b',
     fontSize: 9,
     fontFamily: 'monospace',
     marginTop: 2,
@@ -148,21 +167,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  callBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#10b981', // green
+  callOrb: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#059669',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
   },
-  waBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#25D366', // WhatsApp brand green
+  waOrb: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#16a34a',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
   },
 });
-

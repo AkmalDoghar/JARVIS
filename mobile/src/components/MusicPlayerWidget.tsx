@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Track } from '../types';
-import * as Haptics from 'expo-haptics';
+import { SafeNative } from '../services/safeNativeModules';
 
 interface Props {
   track: Track | null;
@@ -37,97 +37,110 @@ export const MusicPlayerWidget: React.FC<Props> = ({
 
   const progressPercent = duration > 0 ? Math.min((position / duration) * 100, 100) : 0;
 
-  const handleAction = (action: () => void) => {
+  const triggerHaptic = (action: () => void) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (e) {
-      // ignore
-    }
+      const Haptics = SafeNative.Haptics;
+      if (Haptics && typeof Haptics.impactAsync === 'function') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    } catch (e) {}
     action();
   };
 
   return (
     <View style={styles.card}>
-      {/* Header bar */}
-      <View style={styles.header}>
-        <View style={styles.badgeRow}>
-          <MaterialCommunityIcons name="headphones" size={16} color="#00f0ff" />
-          <Text style={styles.badgeText}>BIKE AUDIO DECK</Text>
+      {/* Top Header Row */}
+      <View style={styles.topRow}>
+        <View style={styles.deckBadge}>
+          <MaterialCommunityIcons name="disc" size={14} color="#00f0ff" />
+          <Text style={styles.deckText}>AUDIO COCKPIT DECK</Text>
         </View>
+
         <TouchableOpacity
-          style={styles.favBadge}
-          onPress={() => handleAction(onPlayFavorites)}
+          style={styles.favBtn}
+          onPress={() => triggerHaptic(onPlayFavorites)}
         >
-          <MaterialCommunityIcons name="heart-pulse" size={14} color="#ff0055" />
-          <Text style={styles.favText}>FAVORITES</Text>
+          <MaterialCommunityIcons name="star-four-points" size={12} color="#f59e0b" />
+          <Text style={styles.favBtnText}>FAVORITES</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Track Info */}
-      <View style={styles.infoBox}>
-        <Text style={styles.trackTitle} numberOfLines={1}>
-          {track ? track.title : 'No Track Selected'}
-        </Text>
-        <Text style={styles.trackArtist} numberOfLines={1}>
-          {track ? track.artist : 'Say "JARVIS play favorite songs"'}
-        </Text>
+      {/* Main Track Display */}
+      <View style={styles.trackCard}>
+        <View style={styles.discCover}>
+          <MaterialCommunityIcons
+            name={isPlaying ? 'music-note-eighth' : 'music-note'}
+            size={24}
+            color="#00f0ff"
+          />
+        </View>
+        <View style={styles.trackDetails}>
+          <Text style={styles.title} numberOfLines={1}>
+            {track ? track.title : 'Ready to Stream'}
+          </Text>
+          <Text style={styles.artist} numberOfLines={1}>
+            {track ? track.artist : 'Say "JARVIS play favorite songs"'}
+          </Text>
+        </View>
       </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+      {/* Futuristic Progress Tracker */}
+      <View style={styles.progressSection}>
+        <View style={styles.barBackground}>
+          <View style={[styles.barFill, { width: `${progressPercent}%` }]}>
+            <View style={styles.barIndicatorGlow} />
+          </View>
         </View>
         <View style={styles.timeRow}>
-          <Text style={styles.timeText}>{formatTime(position)}</Text>
-          <Text style={styles.timeText}>{formatTime(duration)}</Text>
+          <Text style={styles.timeVal}>{formatTime(position)}</Text>
+          <Text style={styles.timeVal}>{formatTime(duration)}</Text>
         </View>
       </View>
 
-      {/* Bike-Optimized Oversized Controls */}
+      {/* Oversized Bike-Glove Touch Controls */}
       <View style={styles.controlsRow}>
         {/* Seek -15s */}
         <TouchableOpacity
-          style={styles.subBtn}
-          onPress={() => handleAction(onSeekBackward)}
+          style={styles.seekBtn}
+          onPress={() => triggerHaptic(onSeekBackward)}
         >
-          <MaterialCommunityIcons name="rewind-15" size={26} color="#00f0ff" />
+          <MaterialCommunityIcons name="rewind-15" size={24} color="#38bdf8" />
         </TouchableOpacity>
 
-        {/* Prev */}
+        {/* Previous */}
         <TouchableOpacity
-          style={styles.medBtn}
-          onPress={() => handleAction(onPrev)}
+          style={styles.skipBtn}
+          onPress={() => triggerHaptic(onPrev)}
         >
-          <MaterialCommunityIcons name="skip-previous" size={32} color="#ffffff" />
+          <MaterialCommunityIcons name="skip-previous" size={30} color="#e2e8f0" />
         </TouchableOpacity>
 
-        {/* Big Central Play/Pause Button */}
+        {/* Central Giant Glowing Arc Play Orb */}
         <TouchableOpacity
-          style={[styles.bigPlayBtn, isPlaying && styles.bigPlayBtnActive]}
-          onPress={() => handleAction(onPlayPause)}
+          style={[styles.mainPlayOrb, isPlaying && styles.mainPlayOrbActive]}
+          onPress={() => triggerHaptic(onPlayPause)}
         >
           <MaterialCommunityIcons
             name={isPlaying ? 'pause' : 'play'}
-            size={40}
-            color="#050a14"
+            size={36}
+            color="#020617"
           />
         </TouchableOpacity>
 
         {/* Next */}
         <TouchableOpacity
-          style={styles.medBtn}
-          onPress={() => handleAction(onNext)}
+          style={styles.skipBtn}
+          onPress={() => triggerHaptic(onNext)}
         >
-          <MaterialCommunityIcons name="skip-next" size={32} color="#ffffff" />
+          <MaterialCommunityIcons name="skip-next" size={30} color="#e2e8f0" />
         </TouchableOpacity>
 
         {/* Seek +15s */}
         <TouchableOpacity
-          style={styles.subBtn}
-          onPress={() => handleAction(onSeekForward)}
+          style={styles.seekBtn}
+          onPress={() => triggerHaptic(onSeekForward)}
         >
-          <MaterialCommunityIcons name="fast-forward-15" size={26} color="#00f0ff" />
+          <MaterialCommunityIcons name="fast-forward-15" size={24} color="#38bdf8" />
         </TouchableOpacity>
       </View>
     </View>
@@ -136,116 +149,153 @@ export const MusicPlayerWidget: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(10, 20, 35, 0.85)',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.3)',
+    backgroundColor: 'rgba(3, 7, 18, 0.88)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 240, 255, 0.35)',
     padding: 16,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
     shadowColor: '#00f0ff',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
     elevation: 8,
   },
-  header: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  badgeRow: {
+  deckBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  badgeText: {
+  deckText: {
     color: '#00f0ff',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     letterSpacing: 1.5,
+    fontFamily: 'monospace',
   },
-  favBadge: {
+  favBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 0, 85, 0.15)',
-    borderColor: '#ff0055',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: '#f59e0b',
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 10,
   },
-  favText: {
-    color: '#ff6699',
+  favBtnText: {
+    color: '#fbbf24',
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 1,
+    fontFamily: 'monospace',
   },
-  infoBox: {
-    marginBottom: 10,
-  },
-  trackTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  trackArtist: {
-    color: '#94a3b8',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  progressContainer: {
+  trackCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 14,
     marginBottom: 12,
   },
-  progressBarBg: {
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 2,
+  discCover: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 240, 255, 0.12)',
+    borderWidth: 1.5,
+    borderColor: '#00f0ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trackDetails: {
+    flex: 1,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  artist: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  progressSection: {
+    marginBottom: 14,
+  },
+  barBackground: {
+    height: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 3,
     overflow: 'hidden',
   },
-  progressBarFill: {
+  barFill: {
     height: '100%',
     backgroundColor: '#00f0ff',
+    position: 'relative',
+  },
+  barIndicatorGlow: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 6,
+    backgroundColor: '#ffffff',
+    shadowColor: '#00f0ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
   },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: 5,
   },
-  timeText: {
+  timeVal: {
     color: '#64748b',
     fontSize: 10,
     fontFamily: 'monospace',
+    fontWeight: '600',
   },
   controlsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  subBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 240, 255, 0.08)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  seekBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.2)',
-  },
-  medBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(56, 189, 248, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skipBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  bigPlayBtn: {
+  mainPlayOrb: {
     width: 68,
     height: 68,
     borderRadius: 34,
@@ -254,13 +304,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#00f0ff',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    elevation: 14,
   },
-  bigPlayBtnActive: {
-    backgroundColor: '#38ef7d',
-    shadowColor: '#38ef7d',
+  mainPlayOrbActive: {
+    backgroundColor: '#00ffaa',
+    shadowColor: '#00ffaa',
   },
 });
-

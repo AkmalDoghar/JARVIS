@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { SafeNative } from '../services/safeNativeModules';
 
 interface Props {
   isListening: boolean;
@@ -38,28 +38,33 @@ export const VoiceCommandBar: React.FC<Props> = ({
 }) => {
   const [inputText, setInputText] = useState('');
 
+  const triggerHaptic = (style: any = 'medium') => {
+    try {
+      const Haptics = SafeNative.Haptics;
+      if (Haptics && typeof Haptics.impactAsync === 'function') {
+        const feedback =
+          style === 'heavy'
+            ? Haptics.ImpactFeedbackStyle.Heavy
+            : Haptics.ImpactFeedbackStyle.Medium;
+        Haptics.impactAsync(feedback);
+      }
+    } catch (e) {}
+  };
+
   const handleSend = () => {
     if (!inputText.trim()) return;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (e) {
-      // ignore
-    }
+    triggerHaptic('medium');
     onSubmitVoiceText(inputText.trim());
     setInputText('');
   };
 
   const handleChipPress = (cmd: string) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (e) {
-      // ignore
-    }
+    triggerHaptic('medium');
     onSubmitVoiceText(cmd);
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.dock}>
       {/* Quick Spoken Voice Prompt Chips */}
       <ScrollView
         horizontal
@@ -72,27 +77,26 @@ export const VoiceCommandBar: React.FC<Props> = ({
             style={styles.chip}
             onPress={() => handleChipPress(cmd)}
           >
-            <MaterialCommunityIcons name="microphone-outline" size={12} color="#00f0ff" />
+            <MaterialCommunityIcons name="microphone-variant" size={12} color="#00f0ff" />
             <Text style={styles.chipText}>{cmd}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Voice Mic + Input Box */}
+      {/* Voice Mic + Holographic Input Bar */}
       <View style={styles.inputRow}>
+        {/* Massive Glowing Mic Trigger */}
         <TouchableOpacity
-          style={[styles.micBtn, isListening && styles.micBtnActive]}
+          style={[styles.micOrb, isListening && styles.micOrbActive]}
           onPress={() => {
-            try {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            } catch (e) {}
+            triggerHaptic('heavy');
             onMicPress();
           }}
         >
           <MaterialCommunityIcons
             name={isListening ? 'microphone-settings' : 'microphone'}
-            size={24}
-            color={isListening ? '#050a14' : '#00f0ff'}
+            size={26}
+            color={isListening ? '#020617' : '#00f0ff'}
           />
         </TouchableOpacity>
 
@@ -107,14 +111,14 @@ export const VoiceCommandBar: React.FC<Props> = ({
         />
 
         <TouchableOpacity
-          style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+          style={[styles.sendOrb, !inputText.trim() && styles.sendOrbDisabled]}
           disabled={!inputText.trim()}
           onPress={handleSend}
         >
           <MaterialCommunityIcons
             name="send"
             size={18}
-            color={inputText.trim() ? '#00f0ff' : '#475569'}
+            color={inputText.trim() ? '#00f0ff' : '#334155'}
           />
         </TouchableOpacity>
       </View>
@@ -123,13 +127,18 @@ export const VoiceCommandBar: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
+  dock: {
+    backgroundColor: 'rgba(2, 6, 23, 0.98)',
+    borderTopWidth: 1.5,
+    borderTopColor: 'rgba(0, 240, 255, 0.35)',
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 16,
-    backgroundColor: '#050a14',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 240, 255, 0.2)',
+    shadowColor: '#00f0ff',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 20,
   },
   chipRow: {
     gap: 8,
@@ -140,64 +149,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: 'rgba(0, 240, 255, 0.08)',
-    borderColor: 'rgba(0, 240, 255, 0.25)',
+    borderColor: 'rgba(0, 240, 255, 0.3)',
     borderWidth: 1,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
   },
   chipText: {
-    color: '#94a3b8',
+    color: '#cbd5e1',
     fontSize: 11,
+    fontWeight: '600',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  micBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  micOrb: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: 'rgba(0, 240, 255, 0.12)',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#00f0ff',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#00f0ff',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  micBtnActive: {
+  micOrbActive: {
     backgroundColor: '#00ffaa',
     borderColor: '#00ffaa',
     shadowColor: '#00ffaa',
   },
   input: {
     flex: 1,
-    height: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 22,
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 18,
     color: '#ffffff',
     fontSize: 13,
   },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  sendOrb: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: 'rgba(0, 240, 255, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.3)',
+    borderColor: 'rgba(0, 240, 255, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sendBtnDisabled: {
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+  sendOrbDisabled: {
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     backgroundColor: 'transparent',
   },
 });
-

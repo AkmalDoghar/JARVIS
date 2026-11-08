@@ -10,59 +10,76 @@ interface Props {
 export const VoiceWaveform: React.FC<Props> = ({
   isActive,
   barColor = '#00f0ff',
-  count = 12,
+  count = 20,
 }) => {
+  // Symmetrical curve heights
   const anims = useRef(
-    Array.from({ length: count }, () => new Animated.Value(6))
+    Array.from({ length: count }, () => new Animated.Value(4))
   ).current;
 
   useEffect(() => {
     if (!isActive) {
-      anims.forEach(anim => anim.setValue(6));
+      anims.forEach((anim) => {
+        Animated.timing(anim, {
+          toValue: 4,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+      });
       return;
     }
 
+    const mid = count / 2;
     const loops = anims.map((anim, idx) => {
-      const delay = idx * 60;
-      const targetHeight = 12 + ((idx % 5) + 1) * 7;
+      // Bell curve factor: middle bars are taller
+      const distanceFromMid = Math.abs(idx - mid);
+      const factor = 1 - distanceFromMid / mid;
+      const maxHeight = 8 + factor * 28 + (idx % 3) * 6;
+
+      const delay = Math.abs(idx - mid) * 45;
       return Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(anim, {
-            toValue: targetHeight,
-            duration: 250 + (idx % 3) * 70,
+            toValue: maxHeight,
+            duration: 220 + (idx % 4) * 60,
             useNativeDriver: false,
           }),
           Animated.timing(anim, {
-            toValue: 6,
-            duration: 250 + (idx % 3) * 70,
+            toValue: 4,
+            duration: 220 + (idx % 4) * 60,
             useNativeDriver: false,
           }),
         ])
       );
     });
 
-    loops.forEach(l => l.start());
+    loops.forEach((l) => l.start());
 
     return () => {
-      loops.forEach(l => l.stop());
+      loops.forEach((l) => l.stop());
     };
-  }, [isActive, anims]);
+  }, [isActive, anims, count]);
 
   return (
     <View style={styles.container}>
-      {anims.map((anim, idx) => (
-        <Animated.View
-          key={idx}
-          style={[
-            styles.bar,
-            {
-              backgroundColor: barColor,
-              height: anim,
-            },
-          ]}
-        />
-      ))}
+      <View style={styles.glowUnderlay} />
+      {anims.map((anim, idx) => {
+        const isCenter = Math.abs(idx - count / 2) < 3;
+        return (
+          <Animated.View
+            key={idx}
+            style={[
+              styles.bar,
+              {
+                backgroundColor: isCenter ? '#ffffff' : barColor,
+                height: anim,
+                shadowColor: barColor,
+              },
+            ]}
+          />
+        );
+      })}
     </View>
   );
 };
@@ -73,16 +90,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 48,
-    gap: 4,
+    gap: 3.5,
+    marginVertical: 4,
+    position: 'relative',
+  },
+  glowUnderlay: {
+    position: 'absolute',
+    width: '60%',
+    height: 16,
+    backgroundColor: 'rgba(0, 240, 255, 0.12)',
+    borderRadius: 8,
+    filter: 'blur(10px)',
   },
   bar: {
     width: 3.5,
-    borderRadius: 2,
-    shadowColor: '#00f0ff',
+    borderRadius: 3,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });
-

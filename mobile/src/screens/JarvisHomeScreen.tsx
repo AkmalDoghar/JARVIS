@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeNative } from '../services/safeNativeModules';
@@ -27,8 +29,12 @@ import { ContactsService } from '../services/contactsService';
 import { PhoneService } from '../services/phoneService';
 import { WhatsAppService } from '../services/whatsappService';
 import { AppLauncherService } from '../services/appLauncherService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+type HudTab = 'COCKPIT' | 'AUDIO' | 'COMMS' | 'DIAGNOSTICS';
 
 export const JarvisHomeScreen: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<HudTab>('COCKPIT');
   const [state, setState] = useState<AssistantState>('IDLE');
   const [isBikeMode, setIsBikeMode] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>('00:00');
@@ -53,7 +59,7 @@ export const JarvisHomeScreen: React.FC = () => {
       second: '2-digit',
     });
     setLogs((prev) => [
-      ...prev.slice(-25), // keep last 25 entries
+      ...prev.slice(-30),
       {
         id: Math.random().toString(),
         timestamp: timeStr,
@@ -62,6 +68,19 @@ export const JarvisHomeScreen: React.FC = () => {
       },
     ]);
   }, []);
+
+  const triggerHaptic = (style: any = 'light') => {
+    try {
+      const Haptics = SafeNative.Haptics;
+      if (Haptics && typeof Haptics.impactAsync === 'function') {
+        const feedback =
+          style === 'medium'
+            ? Haptics.ImpactFeedbackStyle.Medium
+            : Haptics.ImpactFeedbackStyle.Light;
+        Haptics.impactAsync(feedback);
+      }
+    } catch (e) {}
+  };
 
   // Clock ticker & keep-awake
   useEffect(() => {
@@ -90,24 +109,24 @@ export const JarvisHomeScreen: React.FC = () => {
   // Initial load: Music & Contacts
   useEffect(() => {
     const initServices = async () => {
-      addLog('SYSTEM', 'Initializing JARVIS Mobile Core...');
+      addLog('SYSTEM', 'Initializing Stark MK-85 Mobile Core...');
 
       // Scan contacts
       const loadedContacts = await ContactsService.loadContacts();
       setContacts(loadedContacts);
-      addLog('SYSTEM', `Phonebook synced: ${loadedContacts.length} contacts loaded.`);
+      addLog('SYSTEM', `Phonebook online: ${loadedContacts.length} neural links established.`);
 
       // Scan local songs
       const songs = await AudioService.scanDeviceSongs();
       const first = AudioService.getCurrentTrack();
       setCurrentTrack(first);
-      addLog('SYSTEM', `Audio storage scanned: ${songs.length} tracks detected.`);
+      addLog('SYSTEM', `Audio frequency array: ${songs.length} audio tracks synced.`);
 
       // Welcome voice greeting for Akmal Sir
       VoiceEngine.speak(
-        'JARVIS Mobile System Online. Ready for your ride, Akmal Sir.'
+        'Stark Systems Online. Ready for your ride, Akmal Sir.'
       );
-      addLog('JARVIS', 'Systems nominal. Ready for hands-free ride control, Akmal Sir.');
+      addLog('JARVIS', 'All systems calibrated at 100%. Ready for hands-free ride command, Akmal Sir.');
     };
 
     initServices();
@@ -142,7 +161,7 @@ export const JarvisHomeScreen: React.FC = () => {
       switch (parsed.type) {
         case 'PLAY_MUSIC': {
           setState('SPEAKING');
-          const reply = 'Playing your favorite tracks now, Akmal Sir.';
+          const reply = 'Streaming your favorite ride tracks now, Akmal Sir.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await AudioService.playFavorites();
@@ -154,7 +173,7 @@ export const JarvisHomeScreen: React.FC = () => {
         case 'STOP_MUSIC': {
           await AudioService.pause();
           setState('SPEAKING');
-          const reply = 'Music playback paused.';
+          const reply = 'Audio playback suspended.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('IDLE');
@@ -163,7 +182,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'NEXT_TRACK': {
           setState('SPEAKING');
-          const reply = 'Skipping to next track.';
+          const reply = 'Engaging next track.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await AudioService.next();
@@ -173,7 +192,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'PREV_TRACK': {
           setState('SPEAKING');
-          const reply = 'Going back to previous song.';
+          const reply = 'Rewinding to previous track.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await AudioService.previous();
@@ -184,7 +203,7 @@ export const JarvisHomeScreen: React.FC = () => {
         case 'SEEK_FORWARD': {
           await AudioService.seekForward(15);
           setState('SPEAKING');
-          const reply = 'Fast forwarded 15 seconds.';
+          const reply = 'Advanced track by 15 seconds.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('PLAYING');
@@ -194,7 +213,7 @@ export const JarvisHomeScreen: React.FC = () => {
         case 'SEEK_BACKWARD': {
           await AudioService.seekBackward(15);
           setState('SPEAKING');
-          const reply = 'Rewound 15 seconds.';
+          const reply = 'Rewound track by 15 seconds.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('PLAYING');
@@ -206,13 +225,13 @@ export const JarvisHomeScreen: React.FC = () => {
           const contact = ContactsService.findContact(query);
           if (contact) {
             setState('CALLING');
-            const reply = `Calling ${contact.name}, Akmal Sir.`;
+            const reply = `Connecting cellular link to ${contact.name}, Akmal Sir.`;
             addLog('JARVIS', reply);
             await VoiceEngine.speak(reply);
             await PhoneService.makeCall(contact);
           } else {
             setState('SPEAKING');
-            const reply = `I could not locate ${query || 'the contact'} in your phonebook.`;
+            const reply = `I could not locate ${query || 'the contact'} in your neural phonebook.`;
             addLog('JARVIS', reply);
             await VoiceEngine.speak(reply);
             setState('IDLE');
@@ -222,7 +241,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'END_CALL': {
           setState('SPEAKING');
-          const reply = 'Disconnecting call, Akmal Sir.';
+          const reply = 'Cellular connection severed, Akmal Sir.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await PhoneService.endCall();
@@ -235,13 +254,13 @@ export const JarvisHomeScreen: React.FC = () => {
           const contact = ContactsService.findContact(query);
           if (contact) {
             setState('CALLING');
-            const reply = `Opening WhatsApp call for ${contact.name}.`;
+            const reply = `Establishing WhatsApp call with ${contact.name}.`;
             addLog('JARVIS', reply);
             await VoiceEngine.speak(reply);
             await WhatsAppService.makeCall(contact);
           } else {
             setState('SPEAKING');
-            const reply = `Contact ${query} not found for WhatsApp.`;
+            const reply = `Target ${query} not found for WhatsApp transmission.`;
             addLog('JARVIS', reply);
             await VoiceEngine.speak(reply);
             setState('IDLE');
@@ -254,13 +273,13 @@ export const JarvisHomeScreen: React.FC = () => {
           const contact = ContactsService.findContact(query);
           if (contact) {
             setState('SPEAKING');
-            const reply = `Sending WhatsApp message to ${contact.name}.`;
+            const reply = `Transmitting WhatsApp message to ${contact.name}.`;
             addLog('JARVIS', reply);
             await VoiceEngine.speak(reply);
             await WhatsAppService.sendMessage(contact, 'Salam Akmal Sir is on a bike ride.');
           } else {
             setState('SPEAKING');
-            const reply = `Could not find ${query} for WhatsApp message.`;
+            const reply = `Unable to dispatch message: ${query} not found.`;
             addLog('JARVIS', reply);
             await VoiceEngine.speak(reply);
           }
@@ -270,7 +289,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'OPEN_GALLERY': {
           setState('SPEAKING');
-          const reply = 'Opening phone gallery.';
+          const reply = 'Displaying optical photo repository.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await AppLauncherService.openGallery();
@@ -280,7 +299,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'OPEN_CAMERA': {
           setState('SPEAKING');
-          const reply = 'Activating camera.';
+          const reply = 'Optical sensors active.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await AppLauncherService.openCamera();
@@ -290,7 +309,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'OPEN_MAPS': {
           setState('SPEAKING');
-          const reply = 'Opening navigation maps.';
+          const reply = 'Synchronizing GPS satellite navigation.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           await AppLauncherService.openMaps();
@@ -300,7 +319,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'BATTERY_STATUS': {
           setState('SPEAKING');
-          const reply = 'Battery level is at 88 percent. Power cells nominal.';
+          const reply = 'Power cells operating at optimal capacity: 88 percent.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('IDLE');
@@ -309,7 +328,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'TIME_CHECK': {
           setState('SPEAKING');
-          const reply = `The time is currently ${currentTime}.`;
+          const reply = `The time is exactly ${currentTime}.`;
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('IDLE');
@@ -318,7 +337,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         case 'JARVIS_STATUS': {
           setState('SPEAKING');
-          const reply = 'All bike telemetry systems and neural modules are running at peak efficiency.';
+          const reply = 'All telemetry links and speech recognition arrays are performing at maximum efficiency.';
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('IDLE');
@@ -327,7 +346,7 @@ export const JarvisHomeScreen: React.FC = () => {
 
         default: {
           setState('SPEAKING');
-          const reply = `Command received: "${commandText}". Executing request.`;
+          const reply = `Order acknowledged: "${commandText}". Processing directive.`;
           addLog('JARVIS', reply);
           await VoiceEngine.speak(reply);
           setState('IDLE');
@@ -344,7 +363,7 @@ export const JarvisHomeScreen: React.FC = () => {
       VoiceEngine.stopSpeaking();
     } else {
       setState('LISTENING');
-      addLog('SYSTEM', 'Voice listening activated. Speak command...');
+      addLog('SYSTEM', 'Acoustic listener engaged. Awaiting voice command...');
     }
   };
 
@@ -352,69 +371,291 @@ export const JarvisHomeScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
       <View style={styles.container}>
-        {/* Bike Mode Header with Telemetry */}
+        {/* Top Cockpit Telemetry Bar */}
         <BikeModeHeader
           currentTime={currentTime}
           isBikeModeActive={isBikeMode}
           onToggleBikeMode={() => {
             const nextMode = !isBikeMode;
             setIsBikeMode(nextMode);
-            addLog('SYSTEM', `Bike mode ${nextMode ? 'ENGAGED' : 'DISENGAGED'}`);
+            addLog('SYSTEM', `Cockpit bike mode ${nextMode ? 'ENGAGED' : 'DISENGAGED'}`);
           }}
           onOpenGallery={() => executeVoiceCommand('gallery kholo')}
           onOpenCamera={() => executeVoiceCommand('camera on karo')}
           onOpenMaps={() => executeVoiceCommand('maps kholo')}
         />
 
+        {/* Futuristic Cockpit Segmented Tab Bar */}
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'COCKPIT' && styles.tabItemActive]}
+            onPress={() => {
+              triggerHaptic();
+              setActiveTab('COCKPIT');
+            }}
+          >
+            <MaterialCommunityIcons
+              name="atom"
+              size={14}
+              color={activeTab === 'COCKPIT' ? '#00f0ff' : '#64748b'}
+            />
+            <Text style={[styles.tabText, activeTab === 'COCKPIT' && styles.tabTextActive]}>
+              COCKPIT
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'AUDIO' && styles.tabItemActive]}
+            onPress={() => {
+              triggerHaptic();
+              setActiveTab('AUDIO');
+            }}
+          >
+            <MaterialCommunityIcons
+              name="disc"
+              size={14}
+              color={activeTab === 'AUDIO' ? '#c084fc' : '#64748b'}
+            />
+            <Text style={[styles.tabText, activeTab === 'AUDIO' && styles.tabTextActiveAudio]}>
+              AUDIO DECK
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'COMMS' && styles.tabItemActive]}
+            onPress={() => {
+              triggerHaptic();
+              setActiveTab('COMMS');
+            }}
+          >
+            <MaterialCommunityIcons
+              name="satellite-variant"
+              size={14}
+              color={activeTab === 'COMMS' ? '#00ffaa' : '#64748b'}
+            />
+            <Text style={[styles.tabText, activeTab === 'COMMS' && styles.tabTextActiveComms]}>
+              COMMS
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'DIAGNOSTICS' && styles.tabItemActive]}
+            onPress={() => {
+              triggerHaptic();
+              setActiveTab('DIAGNOSTICS');
+            }}
+          >
+            <MaterialCommunityIcons
+              name="console-line"
+              size={14}
+              color={activeTab === 'DIAGNOSTICS' ? '#38bdf8' : '#64748b'}
+            />
+            <Text style={[styles.tabText, activeTab === 'DIAGNOSTICS' && styles.tabTextActiveDiag]}>
+              HUD FEED
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Main Content Area */}
         <ScrollView
           style={styles.mainScroll}
           contentContainerStyle={styles.mainScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Central Arc Reactor Interactive Node */}
-          <View style={styles.reactorSection}>
-            <ArcReactor
-              state={state}
-              size={170}
-              onPress={handleMicTap}
-            />
-            <VoiceWaveform
-              isActive={state === 'LISTENING' || state === 'SPEAKING' || isPlaying}
-            />
-          </View>
+          {/* TAB 1: COCKPIT (All-in-One Flight Deck) */}
+          {activeTab === 'COCKPIT' && (
+            <View>
+              {/* Massive Holographic Arc Reactor */}
+              <View style={styles.reactorDeck}>
+                <ArcReactor
+                  state={state}
+                  size={200}
+                  onPress={handleMicTap}
+                />
+                <VoiceWaveform
+                  isActive={state === 'LISTENING' || state === 'SPEAKING' || isPlaying}
+                  barColor={
+                    state === 'LISTENING'
+                      ? '#00ffaa'
+                      : state === 'PLAYING'
+                      ? '#c084fc'
+                      : state === 'CALLING'
+                      ? '#2dd4bf'
+                      : '#00f0ff'
+                  }
+                />
+              </View>
 
-          {/* Music Player Widget */}
-          <MusicPlayerWidget
-            track={currentTrack}
-            isPlaying={isPlaying}
-            position={position}
-            duration={duration}
-            onPlayPause={() => {
-              if (isPlaying) {
-                executeVoiceCommand('stop kro');
-              } else {
-                executeVoiceCommand('mere favourite songs play kro');
-              }
-            }}
-            onNext={() => executeVoiceCommand('next kro')}
-            onPrev={() => executeVoiceCommand('pichay kro')}
-            onSeekForward={() => executeVoiceCommand('forword kro')}
-            onSeekBackward={() => executeVoiceCommand('backward kro')}
-            onPlayFavorites={() => executeVoiceCommand('mere favourite songs play kro')}
-          />
+              {/* Music Player Deck */}
+              <MusicPlayerWidget
+                track={currentTrack}
+                isPlaying={isPlaying}
+                position={position}
+                duration={duration}
+                onPlayPause={() => {
+                  if (isPlaying) {
+                    executeVoiceCommand('stop kro');
+                  } else {
+                    executeVoiceCommand('mere favourite songs play kro');
+                  }
+                }}
+                onNext={() => executeVoiceCommand('next kro')}
+                onPrev={() => executeVoiceCommand('pichay kro')}
+                onSeekForward={() => executeVoiceCommand('forword kro')}
+                onSeekBackward={() => executeVoiceCommand('backward kro')}
+                onPlayFavorites={() => executeVoiceCommand('mere favourite songs play kro')}
+              />
 
-          {/* Contacts Quick Voice Dial Row */}
-          <ContactsQuickDial
-            contacts={contacts}
-            onCall={(c) => executeVoiceCommand(`${c.name} ko call milao`)}
-            onWhatsApp={(c) => executeVoiceCommand(`whatsapp call ${c.name}`)}
-          />
+              {/* Neural Comms Link */}
+              <ContactsQuickDial
+                contacts={contacts}
+                onCall={(c) => executeVoiceCommand(`${c.name} ko call milao`)}
+                onWhatsApp={(c) => executeVoiceCommand(`whatsapp call ${c.name}`)}
+              />
 
-          {/* Live HUD Telemetry Terminal Log */}
-          <TerminalLog logs={logs} />
+              {/* Live HUD Telemetry Log */}
+              <TerminalLog logs={logs} />
+            </View>
+          )}
+
+          {/* TAB 2: FULL AUDIO DECK */}
+          {activeTab === 'AUDIO' && (
+            <View style={styles.tabContentSection}>
+              {/* Visualizer Header */}
+              <View style={styles.audioTabHero}>
+                <MaterialCommunityIcons name="album" size={80} color="#c084fc" />
+                <Text style={styles.audioHeroTitle}>ACOUSTIC SYNTHESIZER</Text>
+                <Text style={styles.audioHeroSubtitle}>
+                  {currentTrack ? currentTrack.title : 'Ready for Audio Command'}
+                </Text>
+                <VoiceWaveform
+                  isActive={isPlaying}
+                  barColor="#c084fc"
+                  count={24}
+                />
+              </View>
+
+              {/* Master Player Controls */}
+              <MusicPlayerWidget
+                track={currentTrack}
+                isPlaying={isPlaying}
+                position={position}
+                duration={duration}
+                onPlayPause={() => {
+                  if (isPlaying) {
+                    executeVoiceCommand('stop kro');
+                  } else {
+                    executeVoiceCommand('mere favourite songs play kro');
+                  }
+                }}
+                onNext={() => executeVoiceCommand('next kro')}
+                onPrev={() => executeVoiceCommand('pichay kro')}
+                onSeekForward={() => executeVoiceCommand('forword kro')}
+                onSeekBackward={() => executeVoiceCommand('backward kro')}
+                onPlayFavorites={() => executeVoiceCommand('mere favourite songs play kro')}
+              />
+
+              {/* Playlist Directory */}
+              <View style={styles.playlistSection}>
+                <Text style={styles.sectionHeader}>STORAGE AUDIO TRACKS</Text>
+                {AudioService.getPlaylist().slice(0, 8).map((t, idx) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={styles.playlistItem}
+                    onPress={() => AudioService.playTrack(idx)}
+                  >
+                    <View style={styles.playIndexBadge}>
+                      <Text style={styles.playIndexText}>{idx + 1}</Text>
+                    </View>
+                    <View style={styles.playItemInfo}>
+                      <Text style={styles.playItemTitle} numberOfLines={1}>{t.title}</Text>
+                      <Text style={styles.playItemArtist}>{t.artist}</Text>
+                    </View>
+                    <MaterialCommunityIcons
+                      name={currentTrack?.id === t.id && isPlaying ? 'waveform' : 'play-circle-outline'}
+                      size={20}
+                      color="#00f0ff"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* TAB 3: COMMS & CONTACTS DIRECTORY */}
+          {activeTab === 'COMMS' && (
+            <View style={styles.tabContentSection}>
+              <View style={styles.commsHeader}>
+                <MaterialCommunityIcons name="account-voice" size={32} color="#00ffaa" />
+                <Text style={styles.commsHeaderTitle}>NEURAL COMMS DIRECTORY</Text>
+                <Text style={styles.commsHeaderSubtitle}>Tap any node or speak: "Ali ko call milao"</Text>
+              </View>
+
+              {/* Expanded Contacts List */}
+              <View style={styles.commsList}>
+                {contacts.map((contact) => (
+                  <View key={contact.id} style={styles.commsCard}>
+                    <View style={styles.commsAvatar}>
+                      <Text style={styles.commsLetter}>{contact.name.charAt(0)}</Text>
+                    </View>
+                    <View style={styles.commsInfo}>
+                      <Text style={styles.commsName}>{contact.name}</Text>
+                      <Text style={styles.commsNumber}>{contact.primaryNumber}</Text>
+                    </View>
+                    <View style={styles.commsActions}>
+                      <TouchableOpacity
+                        style={styles.commsCallBtn}
+                        onPress={() => executeVoiceCommand(`${contact.name} ko call milao`)}
+                      >
+                        <MaterialCommunityIcons name="phone" size={18} color="#ffffff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.commsWaBtn}
+                        onPress={() => executeVoiceCommand(`whatsapp call ${contact.name}`)}
+                      >
+                        <MaterialCommunityIcons name="whatsapp" size={18} color="#ffffff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* TAB 4: HUD DIAGNOSTICS & TELEMETRY */}
+          {activeTab === 'DIAGNOSTICS' && (
+            <View style={styles.tabContentSection}>
+              {/* Telemetry Metric Cards */}
+              <View style={styles.metricsGrid}>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>CORE POWER</Text>
+                  <Text style={styles.metricValue}>88%</Text>
+                  <Text style={styles.metricSub}>NOMINAL // VOLT: 4.1V</Text>
+                </View>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>BT HEADSET LINK</Text>
+                  <Text style={[styles.metricValue, { color: '#00ffaa' }]}>CONNECTED</Text>
+                  <Text style={styles.metricSub}>SCO AUDIO WIDEBAND</Text>
+                </View>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>AUDIO RUNTIME</Text>
+                  <Text style={styles.metricValue}>{isPlaying ? 'STREAMING' : 'IDLE'}</Text>
+                  <Text style={styles.metricSub}>SAMPLE: 44.1kHz FLAC</Text>
+                </View>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>NEURAL LATENCY</Text>
+                  <Text style={[styles.metricValue, { color: '#38bdf8' }]}>12ms</Text>
+                  <Text style={styles.metricSub}>EDGE CACHE ACTIVE</Text>
+                </View>
+              </View>
+
+              {/* Full Terminal Log */}
+              <TerminalLog logs={logs} />
+            </View>
+          )}
         </ScrollView>
 
-        {/* Bottom Voice Command Bar */}
+        {/* Floating Voice Command Dock */}
         <VoiceCommandBar
           isListening={state === 'LISTENING'}
           onMicPress={handleMicTap}
@@ -428,21 +669,260 @@ export const JarvisHomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#050a14',
+    backgroundColor: '#020617',
   },
   container: {
     flex: 1,
-    backgroundColor: '#050a14',
+    backgroundColor: '#020617',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(3, 7, 18, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 240, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    justifyContent: 'space-around',
+  },
+  tabItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabItemActive: {
+    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    borderColor: 'rgba(0, 240, 255, 0.35)',
+  },
+  tabText: {
+    color: '#64748b',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: 'monospace',
+  },
+  tabTextActive: {
+    color: '#00f0ff',
+  },
+  tabTextActiveAudio: {
+    color: '#c084fc',
+  },
+  tabTextActiveComms: {
+    color: '#00ffaa',
+  },
+  tabTextActiveDiag: {
+    color: '#38bdf8',
   },
   mainScroll: {
     flex: 1,
   },
   mainScrollContent: {
-    paddingBottom: 10,
+    paddingBottom: 16,
   },
-  reactorSection: {
+  reactorDeck: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
+  },
+  tabContentSection: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+  },
+  audioTabHero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: 'rgba(192, 132, 252, 0.05)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 132, 252, 0.2)',
+    marginBottom: 12,
+  },
+  audioHeroTitle: {
+    color: '#c084fc',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 2,
+    fontFamily: 'monospace',
+    marginTop: 8,
+  },
+  audioHeroSubtitle: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  playlistSection: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 14,
+    marginTop: 8,
+  },
+  sectionHeader: {
+    color: '#64748b',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    fontFamily: 'monospace',
+    marginBottom: 10,
+  },
+  playlistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    gap: 10,
+  },
+  playIndexBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playIndexText: {
+    color: '#00f0ff',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    fontWeight: '700',
+  },
+  playItemInfo: {
+    flex: 1,
+  },
+  playItemTitle: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  playItemArtist: {
+    color: '#64748b',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  commsHeader: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    backgroundColor: 'rgba(0, 255, 170, 0.05)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 170, 0.2)',
+    marginBottom: 14,
+  },
+  commsHeaderTitle: {
+    color: '#00ffaa',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 2,
+    fontFamily: 'monospace',
+    marginTop: 6,
+  },
+  commsHeaderSubtitle: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  commsList: {
+    gap: 8,
+  },
+  commsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(3, 7, 18, 0.88)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 170, 0.25)',
+    padding: 12,
+    gap: 12,
+  },
+  commsAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 255, 170, 0.12)',
+    borderWidth: 1.5,
+    borderColor: '#00ffaa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commsLetter: {
+    color: '#00ffaa',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  commsInfo: {
+    flex: 1,
+  },
+  commsName: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  commsNumber: {
+    color: '#64748b',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    marginTop: 2,
+  },
+  commsActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  commsCallBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#059669',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commsWaBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 14,
+  },
+  metricCard: {
+    width: '48%',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 12,
+  },
+  metricLabel: {
+    color: '#64748b',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    fontFamily: 'monospace',
+  },
+  metricValue: {
+    color: '#00f0ff',
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    marginTop: 4,
+  },
+  metricSub: {
+    color: '#475569',
+    fontSize: 8,
+    fontFamily: 'monospace',
+    marginTop: 2,
   },
 });
