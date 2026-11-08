@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "JARVIS",
+    "slug": "jarvis-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#050a14",
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "JARVIS requires microphone access for hands-free voice commands while riding.",
+        "NSContactsUsageDescription": "JARVIS requires contacts access to dial contacts on voice command.",
+        "NSAppleMusicUsageDescription": "JARVIS requires media library access to play your favorite songs."
+      }
+    },
+    "android": {
+      "package": "com.akmaldoghar.jarvis",
+      "adaptiveIcon": {
+        "backgroundColor": "#050a14",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.CALL_PHONE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow JARVIS to access your songs and media.",
+          "savePhotosPermission": "Allow JARVIS to save media.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow JARVIS to access phonebook to call contacts hands-free on bike."
+        }
+      ]
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

@@ -16,10 +16,12 @@ backend/database/test_status.png
 *.mp3
 *.wav
 
-# Frontend build & packages
+# Frontend & Mobile build & packages
 node_modules/
 frontend/node_modules/
 frontend/.next/
+mobile/node_modules/
+mobile/.expo/
 .next/
 restored_page.tsx
 backups/
