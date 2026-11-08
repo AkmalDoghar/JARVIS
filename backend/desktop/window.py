@@ -17,11 +17,8 @@ import win32con
 import win32gui
 
 
-# Candidate Chromium executables supporting native --app mode (Edge first for clean isolation from Chrome browser)
+# Candidate Chromium executables supporting native --app mode (Google Chrome exclusively)
 CANDIDATE_EXECUTABLES = [
-    os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
-    os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
-    os.path.expandvars(r"%LocalAppData%\Microsoft\Edge\Application\msedge.exe"),
     os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
     os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
     os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
@@ -166,15 +163,11 @@ def launch_jarvis_app_window(
 
     cmd = [
         exe,
+        "--profile-directory=Default",
         f"--app={url}",
         f"--window-size={width},{height}",
-        f"--user-data-dir={profile_dir}",
         "--no-first-run",
         "--no-default-browser-check",
-        "--disable-extensions",
-        "--disable-features=Translate",
-        "--disable-background-mode",
-        "--app-id=JARVIS_Personal_AI_Assistant"
     ]
 
     try:
