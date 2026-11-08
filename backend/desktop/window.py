@@ -17,13 +17,13 @@ import win32con
 import win32gui
 
 
-# Candidate Chromium executables supporting native --app mode
+# Candidate Chromium executables supporting native --app mode (Chrome first, then Edge)
 CANDIDATE_EXECUTABLES = [
-    os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
-    os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
     os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
     os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
     os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+    os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+    os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
     os.path.expandvars(r"%LocalAppData%\Microsoft\Edge\Application\msedge.exe"),
 ]
 
@@ -41,22 +41,60 @@ def is_app_mode_supported() -> bool:
     return get_browser_app_executable() is not None
 
 
-def find_and_focus_jarvis_window() -> bool:
+def brand_jarvis_window(hwnd: int) -> bool:
     """
-    Search running top-level windows for JARVIS Dashboard and bring it to foreground.
-    Matches window titles containing 'JARVIS', 'J.A.R.V.I.S', or 'localhost:3000'.
+    Applies custom AppUserModelID, Arc Reactor icons, and relaunch metadata
+    to the window HWND so Windows Taskbar pins and identifies JARVIS natively
+    instead of generic Microsoft Edge / Chrome.
     """
+    if not hwnd or not win32gui.IsWindow(hwnd):
+        return False
+
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    ico_path = os.path.join(project_root, "backend", "desktop", "jarvis.ico")
+    pythonw_exe = os.path.join(project_root, ".venv", "Scripts", "pythonw.exe")
+    if not os.path.exists(pythonw_exe):
+        pythonw_exe = "pythonw.exe"
+    script_path = os.path.join(project_root, "start_jarvis_desktop.py")
+
+    # 1. Register with Windows Property Store (AppUserModelID & Relaunch Info)
+    try:
+        from win32com.propsys import propsys, pscon
+        store = propsys.SHGetPropertyStoreForWindow(hwnd)
+        store.SetValue(pscon.PKEY_AppUserModel_ID, propsys.PROPVARIANTType("JARVIS.Personal.AI.Assistant"))
+        store.SetValue(pscon.PKEY_AppUserModel_RelaunchCommand, propsys.PROPVARIANTType(f'"{pythonw_exe}" "{script_path}"'))
+        if os.path.exists(ico_path):
+            store.SetValue(pscon.PKEY_AppUserModel_RelaunchIconResource, propsys.PROPVARIANTType(f"{ico_path},0"))
+        store.SetValue(pscon.PKEY_AppUserModel_RelaunchDisplayNameResource, propsys.PROPVARIANTType("JARVIS Assistant"))
+        store.Commit()
+    except Exception as e:
+        pass
+
+    # 2. Inject Arc Reactor icon into window and taskbar button
+    try:
+        if os.path.exists(ico_path):
+            hicon_big = win32gui.LoadImage(0, ico_path, win32con.IMAGE_ICON, 32, 32, win32con.LR_LOADFROMFILE)
+            hicon_small = win32gui.LoadImage(0, ico_path, win32con.IMAGE_ICON, 16, 16, win32con.LR_LOADFROMFILE)
+            if hicon_big:
+                win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, hicon_big)
+            if hicon_small:
+                win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, hicon_small)
+    except Exception as e:
+        pass
+
+    return True
+
+
+def _find_jarvis_hwnd() -> Optional[int]:
+    """Find the top-level HWND belonging to JARVIS HUD."""
     found_hwnd = None
 
     def enum_windows_callback(hwnd, _):
         nonlocal found_hwnd
         if win32gui.IsWindowVisible(hwnd):
-            title = win32gui.GetWindowText(hwnd).strip()
-            # Match common dashboard window titles
-            title_low = title.lower()
-            if any(k in title_low for k in ("j.a.r.v.i.s", "jarvis", "localhost:3000", "3000")):
-                # Avoid matching code editors, terminals, or folders containing the word 'jarvis'
-                if not any(k in title_low for k in ("visual studio code", "powershell", "cmd.exe", "github desktop")):
+            title = win32gui.GetWindowText(hwnd).strip().lower()
+            if any(k in title for k in ("j.a.r.v.i.s", "jarvis", "localhost:3000", "3000")):
+                if not any(k in title for k in ("visual studio code", "powershell", "cmd.exe", "github desktop", "antigravity")):
                     found_hwnd = hwnd
                     return False
         return True
@@ -66,8 +104,21 @@ def find_and_focus_jarvis_window() -> bool:
     except Exception:
         pass
 
+    return found_hwnd
+
+
+def find_and_focus_jarvis_window() -> bool:
+    """
+    Search running top-level windows for JARVIS Dashboard and bring it to foreground.
+    Matches window titles containing 'JARVIS', 'J.A.R.V.I.S', or 'localhost:3000'.
+    """
+    found_hwnd = _find_jarvis_hwnd()
+
     if found_hwnd:
         try:
+            # Brand window with Arc Reactor icon & AUMID
+            brand_jarvis_window(found_hwnd)
+
             # Restore if minimized
             if win32gui.IsIconic(found_hwnd):
                 win32gui.ShowWindow(found_hwnd, win32con.SW_RESTORE)
@@ -128,6 +179,18 @@ def launch_jarvis_app_window(
 
         print(f"[Window] Launching standalone JARVIS Desktop Window via {os.path.basename(exe)}...")
         subprocess.Popen(cmd, creationflags=creation_flags)
+
+        # Asynchronously poll for the new window and brand it with Arc Reactor icon & AUMID
+        import threading
+        def _brand_worker():
+            for _ in range(40):
+                time.sleep(0.25)
+                h = _find_jarvis_hwnd()
+                if h:
+                    brand_jarvis_window(h)
+                    break
+        threading.Thread(target=_brand_worker, daemon=True).start()
+
         return True
     except Exception as e:
         print(f"[Window] Error launching native app window: {e}. Falling back to default browser.")

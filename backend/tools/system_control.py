@@ -289,24 +289,120 @@ def open_folder(folder_path: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to open folder: {str(e)}"}
 
 
-def _launch_browser(url: str, inspect: bool = False) -> bool:
-    """Launch default browser, or Chrome/Edge with developer tools (inspect mode) active."""
-    if inspect:
-        candidates = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
-            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        ]
-        for exe in candidates:
-            if os.path.exists(exe):
-                try:
-                    subprocess.Popen([exe, "--auto-open-devtools-for-tabs", url])
-                    return True
-                except Exception:
-                    pass
-    return webbrowser.open(url)
+def get_chrome_executable() -> Optional[str]:
+    """Find installed Google Chrome executable on the system."""
+    candidates = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+        os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+    ]
+    for exe in candidates:
+        if os.path.exists(exe):
+            return exe
+    return shutil.which("chrome") or shutil.which("google-chrome")
+
+
+def configure_chrome_as_default_webbrowser() -> None:
+    """Register Google Chrome as preferred browser controller in Python's webbrowser module."""
+    chrome_exe = get_chrome_executable()
+    if chrome_exe:
+        try:
+            webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_exe), preferred=True)
+        except Exception:
+            pass
+
+
+def get_primary_chrome_profile() -> str:
+    """
+    Detect the primary Google Chrome profile directory on this system.
+    Searches Chrome's Local State to find the default/primary profile (e.g. 'Default').
+    Defaults to 'Default' (Rana Akmal / ranaakmalr703@gmail.com).
+    """
+    try:
+        user_data = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "User Data")
+        local_state_file = os.path.join(user_data, "Local State")
+        if os.path.exists(local_state_file):
+            with open(local_state_file, "r", encoding="utf-8") as f:
+                state = json.load(f)
+                info = state.get("profile", {}).get("info_cache", {})
+                if "Default" in info:
+                    return "Default"
+                for prof_id, prof_data in info.items():
+                    if "ranaakmalr703" in prof_data.get("user_name", ""):
+                        return prof_id
+                if info:
+                    return list(info.keys())[0]
+    except Exception as e:
+        print(f"[Chrome] Primary profile detection fallback: {e}")
+    return "Default"
+
+
+def find_chrome_profile_for_email(email_addr: str) -> Optional[str]:
+    """Find which Chrome profile folder corresponds to a given email address."""
+    if not email_addr:
+        return None
+    try:
+        user_data = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "User Data")
+        local_state_file = os.path.join(user_data, "Local State")
+        if os.path.exists(local_state_file):
+            with open(local_state_file, "r", encoding="utf-8") as f:
+                state = json.load(f)
+                info = state.get("profile", {}).get("info_cache", {})
+                target_clean = email_addr.lower().strip()
+                for prof_id, prof_data in info.items():
+                    user_name = prof_data.get("user_name", "").lower().strip()
+                    if user_name and user_name == target_clean:
+                        return prof_id
+    except Exception:
+        pass
+    return None
+
+
+def _launch_browser(url: str, inspect: bool = False, profile: Optional[str] = None) -> bool:
+    """
+    Launch URL directly in Google Chrome within the creator's designated or primary profile ('Default').
+    Always forces Google Chrome and the primary profile directory so Edge or other profiles are never used.
+    """
+    clean_url = (url or "").strip()
+    if not clean_url.startswith(("http://", "https://", "file://", "mailto:")):
+        clean_url = "https://" + clean_url
+
+    chrome_exe = get_chrome_executable()
+    target_profile = (profile or "").strip() or get_primary_chrome_profile()
+
+    if chrome_exe:
+        cmd = [chrome_exe]
+        if target_profile:
+            cmd.append(f"--profile-directory={target_profile}")
+        if inspect:
+            cmd.append("--auto-open-devtools-for-tabs")
+        cmd.append(clean_url)
+        try:
+            creation_flags = 0
+            if os.name == "nt":
+                creation_flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            subprocess.Popen(cmd, creationflags=creation_flags)
+            return True
+        except Exception as e:
+            print(f"[Browser] Error launching Chrome directly: {e}")
+            try:
+                subprocess.Popen(cmd)
+                return True
+            except Exception:
+                pass
+
+    # Fallback to configured webbrowser controller if Chrome not found
+    try:
+        configure_chrome_as_default_webbrowser()
+        return webbrowser.open(clean_url)
+    except Exception as e:
+        print(f"[Browser] webbrowser.open fallback error: {e}")
+        return False
+
+
+# Register Chrome on module import
+configure_chrome_as_default_webbrowser()
 
 
 PORTAL_SHORTCUTS: Dict[str, str] = {
@@ -1748,7 +1844,7 @@ def make_whatsapp_call(contact_name_or_phone: str, call_type: str = "voice") -> 
             "success": True,
             "contact": contact_display,
             "call_type": "video" if is_video else "voice",
-            "message": f"Ji Akmal bhai, '{contact_display}' ko WhatsApp {display_type} mila di hai!"
+            "message": f"Ji Akmal Sir, '{contact_display}' ko WhatsApp {display_type} mila di hai!"
         }
 
     except Exception as e:

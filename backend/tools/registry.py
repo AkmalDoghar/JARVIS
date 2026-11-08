@@ -488,6 +488,43 @@ JARVIS_TOOLS_SCHEMA: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "open_creator_email",
+            "description": "Open creator Akmal Sir's email inbox or compose window directly in browser. Supports multiple accounts: 'primary', 'personal', 'work', 'developer', 'official', '1', '2', '3', '4', or email address substring. Use when the user says 'open email', 'meri email check karo', 'open my work email', 'inbox open karo', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "identifier": {
+                        "type": "string",
+                        "description": "Which email account to open: 'primary', 'personal', 'work', 'developer', 'official', '1', '2', '3', '4', or specific email address/keyword."
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["inbox", "compose"],
+                        "default": "inbox",
+                        "description": "'inbox' to open mail inbox folder, or 'compose' to start a new draft."
+                    },
+                    "recipient": {
+                        "type": "string",
+                        "description": "Optional recipient email address if action is 'compose'."
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_creator_emails_summary",
+            "description": "Retrieve summary of creator Akmal Sir's registered email accounts (personal, work, developer, official).",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "save_creator_thought",
             "description": "Save a personal thought, goal, plan, or note to the creator's private Vault. Use when the user says 'note this thought', 'save to vault', 'mera goal add karo', or 'yeh idea likh lo'.",
             "parameters": {
@@ -1101,7 +1138,7 @@ JARVIS_TOOLS_SCHEMA: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_creator_dossier",
-            "description": "Retrieve comprehensive digital dossier, online identity, social links, and tech stack of creator Akmal bhai.",
+            "description": "Retrieve comprehensive digital dossier, online identity, social links, and tech stack of creator Akmal Sir.",
             "parameters": {
                 "type": "object",
                 "properties": {}
@@ -1618,6 +1655,8 @@ TOOL_HANDLERS = {
     # Creator Vault & Dossier tools
     "get_creator_info": creator_tools.get_creator_info,
     "open_creator_link": creator_tools.open_creator_link,
+    "open_creator_email": creator_tools.open_creator_email,
+    "get_creator_emails_summary": creator_tools.get_creator_emails_summary,
     "save_creator_thought": creator_tools.save_creator_thought,
     "get_active_projects": creator_tools.get_active_projects,
     "open_project": creator_tools.open_project,
@@ -1897,6 +1936,17 @@ def get_relevant_tools_schema(query: Optional[str] = None) -> List[Dict[str, Any
         selected_names.update({
             "get_creator_accounts_info", "inspect_creator_account", "draft_social_post", 
             "publish_social_post", "open_creator_link"
+        })
+
+    # Email & Communications Matrix
+    email_triggers = (
+        "email", "mail", "gmail", "inbox", "outlook", "hotmail", "dak", "khat", 
+        "compose", "inboxes", "charo email", "chaaro email", "sari email", "saari email",
+        "meri email", "mere email", "email check", "email open"
+    )
+    if any(k in q for k in email_triggers):
+        selected_names.update({
+            "open_creator_email", "get_creator_emails_summary", "open_creator_link"
         })
 
     # Autonomous Planning / Missions

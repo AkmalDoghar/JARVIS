@@ -216,7 +216,7 @@ def clean_text_for_speech(text: str) -> str:
     # If the text was entirely code/markdown and nothing is left
     if not cleaned:
         if is_urdu_text(text):
-            return "Ji Akmal bhai, code aur details screen par display kar di hain."
+            return "Ji Akmal Sir, code aur details screen par display kar di hain."
         return "Yes sir, the details are displayed on your screen."
 
     # If text is very long, limit to first 1-2 sentences for natural speech

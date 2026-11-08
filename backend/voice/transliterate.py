@@ -1,6 +1,6 @@
 """
 JARVIS Roman Urdu to Nastaliq / Urdu Script Phonetic Transliteration Engine
-Converts Roman Urdu sentences (e.g. 'Ji Akmal bhai, main sun raha hoon') into
+Converts Roman Urdu sentences (e.g. 'Ji Akmal Sir, main sun raha hoon') into
 phonetically accurate Urdu script so Edge-TTS ('ur-PK-AsadNeural') sounds like
 a 100% natural, broadcast-quality Pakistani human male presenter for FREE.
 """

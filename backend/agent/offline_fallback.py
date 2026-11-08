@@ -216,7 +216,7 @@ def parse_screenshot_command(text: str) -> bool:
 # ─── 8. Creator Dossier & Memories ───
 def parse_dossier_query(text: str) -> Optional[str]:
     t = _clean(text).lower()
-    if any(k in t for k in ("creator details", "akmal bhai ki profile", "who created you", "tumhe kisne banaya", "dossier")):
+    if any(k in t for k in ("creator details", "Akmal Sir ki profile", "who created you", "tumhe kisne banaya", "dossier")):
         return "dossier"
     if any(k in t for k in ("memories dikhao", "show memories", "active memories", "yaad kya hai")):
         return "memories"
@@ -252,7 +252,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
         tool_name = "open_application" if action == "open" else "close_application"
         tool_res = execute_tool(tool_name, {"app_name": app_name})
         spoken = (
-            f"Ji Akmal bhai, {app_name} {'open' if action == 'open' else 'close'} kar di hai."
+            f"Ji Akmal Sir, {app_name} {'open' if action == 'open' else 'close'} kar di hai."
             if is_ur else
             f"Yes sir, {app_name} has been {'opened' if action == 'open' else 'closed'}."
         )
@@ -305,7 +305,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
         res_data = tool_res.get("result", {})
         msg_text = res_data.get("message") or tool_res.get("message") or "System status retrieved."
         spoken = (
-            "Ji Akmal bhai, system telemetry screen par display kar di hai."
+            "Ji Akmal Sir, system telemetry screen par display kar di hai."
             if is_ur else
             "System telemetry has been retrieved and displayed on your screen."
         )
@@ -326,7 +326,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
     if pwr_tool:
         tool_res = execute_tool(pwr_tool, {})
         if tool_res.get("status") == "PENDING_CONFIRMATION":
-            spoken = "Ji Akmal bhai, is action ke liye PIN aur confirmation required hai." if is_ur else "Security confirmation required."
+            spoken = "Ji Akmal Sir, is action ke liye PIN aur confirmation required hai." if is_ur else "Security confirmation required."
             return {
                 "response": tool_res.get("message", f"Action '{pwr_tool}' requires confirmation."),
                 "spoken_response": spoken,
@@ -390,7 +390,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
             reply = f"{status_msg}\n\n```diff\n{diff_str}\n```"
 
         spoken = (
-            "Ji Akmal bhai, git status check kar liya hai."
+            "Ji Akmal Sir, git status check kar liya hai."
             if is_ur else
             "Git status verified."
         )
@@ -409,7 +409,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
     # 7. Screenshot
     if parse_screenshot_command(message):
         tool_res = execute_tool("take_screenshot", {})
-        spoken = "Ji Akmal bhai, screenshot capture kar liya hai." if is_ur else "Screenshot captured successfully."
+        spoken = "Ji Akmal Sir, screenshot capture kar liya hai." if is_ur else "Screenshot captured successfully."
         return {
             "response": tool_res.get("result", {}).get("message") or spoken,
             "spoken_response": spoken,
@@ -432,7 +432,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
             "Official Portfolio: https://akmalcode.vercel.app\n"
             "GitHub: https://github.com/AkmalDoghar"
         )
-        spoken = "Ji Akmal bhai, aap ka Digital Dossier screen par display kar diya hai." if is_ur else "Master Creator profile displayed."
+        spoken = "Ji Akmal Sir, aap ka Digital Dossier screen par display kar diya hai." if is_ur else "Master Creator profile displayed."
         return {
             "response": reply,
             "spoken_response": spoken,
@@ -452,7 +452,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
         else:
             reply = "Filhal koi long-term memory store nahi hai." if is_ur else "No long-term memories currently stored."
 
-        spoken = "Ji Akmal bhai, long term memories screen par display kar di hain." if is_ur else "Long term memories displayed."
+        spoken = "Ji Akmal Sir, long term memories screen par display kar di hain." if is_ur else "Long term memories displayed."
         return {
             "response": reply,
             "spoken_response": spoken,
@@ -469,7 +469,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
     if greet:
         if greet == "identity":
             reply = (
-                "Main JARVIS hoon—Muhammad Akmal (Akmal bhai) ka Autonomous Personal AI Operating System. "
+                "Main JARVIS hoon—Muhammad Akmal (Akmal Sir) ka Autonomous Personal AI Operating System. "
                 "Main aap ke Windows system controls, developer workflows aur automation ko handle karta hoon."
                 if is_ur else
                 "I am JARVIS—an Autonomous Personal AI Operating System architected for Muhammad Akmal. "
@@ -477,7 +477,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
             )
         else:
             reply = (
-                "Ji Akmal bhai! Main hazir hoon. Filhal Offline Mode mein hoon, tamam system controls (apps, volume, files, git, specs) operational hain. Farmayiye kya hukum hai?"
+                "Ji Akmal Sir! Main hazir hoon. Filhal Offline Mode mein hoon, tamam system controls (apps, volume, files, git, specs) operational hain. Farmayiye kya hukum hai?"
                 if is_ur else
                 "Hello sir! JARVIS is online in Offline System Mode. All computer controls (apps, volume, hardware specs, files, git) are fully active. How may I assist you?"
             )
@@ -494,7 +494,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
 
     # 10. Fallback for Complex / Generative Queries when Offline with No Local LLM
     offline_msg = (
-        "Akmal bhai, internet connection filhal offline hai aur local Ollama model active nahi mila. "
+        "Akmal Sir, internet connection filhal offline hai aur local Ollama model active nahi mila. "
         "Tamam system commands (apps open/close, volume, files, git status, hardware specs, screenshot) offline bilkul active hain. "
         "Generative sawalat ya complex coding ke liye internet connect karein ya `ollama run llama3.2` start karein."
         if is_ur else
@@ -503,7 +503,7 @@ def execute_offline_system_command(message: str, response_language: str = "auto"
         "For complex generative tasks, please connect to the internet or start a local Ollama model."
     )
     spoken_offline = (
-        "Ji Akmal bhai, system offline mode mein hai. System commands active hain, lekin generative sawalat ke liye internet ya Ollama darkar hai."
+        "Ji Akmal Sir, system offline mode mein hai. System commands active hain, lekin generative sawalat ke liye internet ya Ollama darkar hai."
         if is_ur else
         "System is in offline mode. Local system commands are ready."
     )

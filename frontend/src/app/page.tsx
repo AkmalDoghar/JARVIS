@@ -7,9 +7,10 @@ import {
   VolumeX, Sparkles, ShieldAlert, KeyRound, 
   Timer, ShieldCheck, 
   Radio, Cpu, Zap, Layers, Eye, Bot,
-  Copy, Check
+  Copy, Check, FolderGit2, Globe
 } from "lucide-react";
 import { JarvisOrb } from "@/components/JarvisOrb";
+import { HudTimerWidget } from "@/components/HudTimerWidget";
 import { CreatorDossierModal, CreatorDossierData } from "@/components/CreatorDossierModal";
 import { Sidebar } from "@/components/Sidebar";
 import { HudModuleModal, HudModuleTab } from "@/components/HudModuleModal";
@@ -66,7 +67,7 @@ export function cleanTextForSpeech(text: string): string {
   cleaned = cleaned.replace(/\s+/g, " ").trim();
 
   if (!cleaned) {
-    return "Ji Akmal bhai, details screen par display kar di hain.";
+    return "Ji Akmal Sir, details screen par display kar di hain.";
   }
 
   if (cleaned.length > 200) {
@@ -804,11 +805,11 @@ export default function Dashboard() {
       isTransitioningRef.current = false;
       handleSend(undefined, command);
     } else {
-      showNotice("🎙️ JARVIS: Ji Akmal bhai? Listening...");
-      await speakResponse("Ji Akmal bhai?");
+      showNotice("🎙️ JARVIS: Ji Akmal Sir? Listening...");
+      await speakResponse("Ji Akmal Sir?");
       isTransitioningRef.current = false;
       setTimeout(() => {
-        startActiveListening("Ji Akmal bhai, sun raha hoon...");
+        startActiveListening("Ji Akmal Sir, sun raha hoon...");
       }, 250);
     }
   };
@@ -961,7 +962,7 @@ export default function Dashboard() {
               setIsContinuousConversation(false);
               isContinuousConversationRef.current = false;
               showNotice("Open Mic mode ended.");
-              speakResponse("Ji Akmal bhai, open mic band kar diya hai. Standby mode active.");
+              speakResponse("Ji Akmal Sir, open mic band kar diya hai. Standby mode active.");
               setTimeout(() => {
                 if (isWakeWordEnabledRef.current) startWakeWordListening();
               }, 400);
@@ -1071,7 +1072,7 @@ export default function Dashboard() {
       }
       playWakeChime();
       showNotice("🎙️ Open Mic Mode ACTIVATED! Speak freely without saying 'JARVIS'.");
-      await speakResponse("Ji Akmal bhai, open mic active hai. Aap direct baat kar sakte hain.");
+      await speakResponse("Ji Akmal Sir, open mic active hai. Aap direct baat kar sakte hain.");
       setTimeout(() => {
         startActiveListening();
       }, 350);
@@ -1217,7 +1218,7 @@ export default function Dashboard() {
       if (res.ok) {
         showNotice(`Action '${pendingAction.toolName}' approved and executed!`);
         const confirmMsg = data.result?.result?.message || `Executed ${pendingAction.toolName}.`;
-        const spokenConfirm = "Ji Akmal bhai, action approve kar ke execute kar diya hai.";
+        const spokenConfirm = "Ji Akmal Sir, action approve kar ke execute kar diya hai.";
         setMessages(prev => [...prev, {
           id: createMessageId(),
           sender: "jarvis",
@@ -1327,7 +1328,7 @@ export default function Dashboard() {
 
   const previewVoice = async (lang: "ur" | "en") => {
     const text = lang === "ur" 
-      ? "Ji Akmal bhai! Main Asad hoon, aapka neural AI voice assistant." 
+      ? "Ji Akmal Sir! Main Asad hoon, aapka neural AI voice assistant." 
       : "Hello Akmal! I am Christopher, your dedicated English neural assistant.";
     await speakResponse(text);
   };
@@ -1646,21 +1647,36 @@ export default function Dashboard() {
                 const el = document.getElementById("jarvis-chat-input");
                 el?.focus();
               }}
+              onOpenHudModal={(tab) => openHudModal(tab)}
               className="w-full h-full rounded-3xl cyber-glass border border-cyan-500/25 shadow-[0_8px_35px_rgba(0,0,0,0.5)] overflow-hidden"
               collapsible={false}
             />
           </div>
 
-          {/* COLUMN 2: CENTER HERO — HOLOGRAPHIC ARC REACTOR & HUD MODULE LAUNCHERS */}
-          <div className="w-full lg:flex-[1] xl:flex-[1] min-w-[340px] max-w-[560px] h-full flex flex-col gap-3.5 overflow-hidden min-h-0">
-            {/* Center Hero: Pure Tony Stark Holographic Arc Reactor Stage */}
+          {/* COLUMN 2: CENTER HERO — HOLOGRAPHIC ARC REACTOR & INTEGRATED CHRONO MATRIX */}
+          <div className="w-full lg:flex-[1.1] xl:flex-[1.1] min-w-[340px] max-w-[580px] h-full flex flex-col gap-3 overflow-hidden min-h-0">
+            
+            {/* Center Hero: Pure Tony Stark Holographic Arc Reactor Stage (STATIONARY / NON-SCROLLABLE) */}
             <div
               id="jarvis-orb-stage"
-              className="flex-1 flex items-center justify-center overflow-hidden py-4 rounded-3xl cyber-glass border border-cyan-500/25 shadow-[0_8px_35px_rgba(0,0,0,0.5)] bg-gradient-to-b from-[#08152E]/60 via-[#040A18]/80 to-[#020610]/95 min-h-[320px]"
+              className="relative shrink-0 flex flex-col items-center justify-center overflow-hidden py-3 px-3 rounded-3xl cyber-glass border border-cyan-500/35 shadow-[0_8px_35px_rgba(0,0,0,0.7)] bg-gradient-to-b from-[#08152E]/85 via-[#040A18]/90 to-[#020610]/98 min-h-[250px] group"
             >
+              {/* Holographic Tactical HUD Corner Brackets */}
+              <div className="absolute top-2.5 left-3 text-[9px] font-mono text-cyan-400/60 flex items-center gap-1.5 select-none">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shadow-[0_0_6px_#22d3ee]" />
+                <span className="font-extrabold tracking-widest">ARC_CORE // MARK-IX</span>
+              </div>
+              <div className="absolute top-2.5 right-3 text-[9px] font-mono text-cyan-400/60 flex items-center gap-1 select-none">
+                <span className="text-slate-400">STATE:</span>
+                <span className="text-cyan-200 font-extrabold uppercase px-1.5 py-0.2 rounded bg-cyan-500/20 border border-cyan-400/40">
+                  {orbStatus}
+                </span>
+              </div>
+
+              {/* Central Holographic Orb */}
               <div
                 id="jarvis-orb-trigger"
-                className="z-10 cursor-pointer"
+                className="z-10 cursor-pointer my-1 hover:scale-105 transition-transform duration-300"
               >
                 <JarvisOrb
                   status={orbStatus}
@@ -1670,109 +1686,178 @@ export default function Dashboard() {
                   onClick={handleOrbClick}
                 />
               </div>
-            </div>
 
-            {/* Tactical Subsystems Control Dock (Multi-Phase Launch Matrix) */}
-            <div className="shrink-0 rounded-2xl cyber-glass border border-cyan-500/25 p-2 bg-gradient-to-b from-[#08132A]/90 via-[#040A18]/95 to-[#020510]/98 shadow-[0_4px_25px_rgba(0,0,0,0.5)] flex flex-col gap-1.5">
-              {/* Micro Status Bar */}
-              <div className="flex items-center justify-between px-1 text-[10px] font-mono">
-                <div className="flex items-center gap-1.5 text-cyan-300">
-                  <Sparkles size={11} className="text-cyan-400 animate-pulse" />
-                  <span className="font-hud tracking-wider font-bold text-[9px] sm:text-[10px]">
-                    TACTICAL SUBSYSTEMS MATRIX
-                  </span>
-                </div>
-                <span className="text-slate-400 text-[9px]">
-                  MULTI-PHASE CONTROLS
+              {/* Live Audio Spectrum Equalizer Waveform */}
+              <div className="flex items-center gap-1 mt-1 z-10">
+                {[6, 12, 18, 26, 16, 10, 22, 30, 20, 14, 8, 16, 24, 12].map((h, i) => (
+                  <span
+                    key={i}
+                    className={`w-1 rounded-full transition-all duration-150 ${
+                      isSpeaking
+                        ? "bg-cyan-300 shadow-[0_0_6px_#22d3ee] animate-pulse"
+                        : isListening
+                        ? "bg-purple-400 shadow-[0_0_6px_#c084fc] animate-bounce"
+                        : "bg-cyan-500/25"
+                    }`}
+                    style={{
+                      height: isSpeaking ? `${Math.max(6, (h * 1.2) % 32)}px` : isListening ? `${h}px` : "4px"
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Bottom Subtle Status Prompt */}
+              <div className="text-[10px] font-mono text-slate-400 mt-1.5 z-10 flex items-center gap-1.5">
+                <span className="text-cyan-400 font-bold">CLICK ORB</span>
+                <span>to arm voice or press</span>
+                <span className="text-cyan-300 font-bold px-1 rounded bg-cyan-950/60 border border-cyan-500/30">
+                  Ctrl+Space
                 </span>
               </div>
+            </div>
 
-              {/* Row 1: Core Operational Subsystems */}
-              <div className="grid grid-cols-3 gap-1.5 text-xs font-mono">
-                {/* 1. Memory */}
-                <button
-                  onClick={() => openHudModal("memory")}
-                  className="py-1.5 px-2 rounded-xl bg-[#061024]/80 hover:bg-[#0d1a38] border border-purple-500/30 hover:border-purple-400/70 text-slate-300 hover:text-purple-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-                  title="Open Neural Memory Matrix"
-                >
-                  <BrainCircuit size={13} className="text-purple-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="font-semibold truncate">Memory</span>
-                </button>
+            {/* SCROLLABLE SUB-DECK: ONLY CONTENT BELOW THE ORB SCROLLS */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 min-h-0 pr-1 pb-1">
+              {/* INTEGRATED LIVE CHRONO & TIMER WIDGET (Directly on Main Page) */}
+              <HudTimerWidget
+                activeTimers={activeTimers}
+                currentTimeSec={currentTimeSec}
+                formatSecondsToClock={formatSecondsToClock}
+                handleCancelItem={handleCancelItem}
+                handleLaunchPreset={handleLaunchPreset}
+                onOpenFullModal={() => openHudModal("timers")}
+              />
 
-                {/* 2. Timers */}
-                <button
-                  onClick={() => openHudModal("timers")}
-                  className="py-1.5 px-2 rounded-xl bg-[#061024]/80 hover:bg-[#0d1a38] border border-amber-500/30 hover:border-amber-400/70 text-slate-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-                  title="Open Chrono Hub (Timers & Alarms)"
-                >
-                  <Timer size={13} className="text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="font-semibold truncate">Timers</span>
-                  {(activeTimers.length + activeAlarms.length + activeReminders.length) > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-                  )}
-                </button>
+              {/* Tactical Subsystems Control Dock (Multi-Phase Launch Matrix) */}
+              <div className="shrink-0 rounded-3xl cyber-glass border border-cyan-500/25 p-3 bg-gradient-to-b from-[#08132A]/90 via-[#040A18]/95 to-[#020510]/98 shadow-[0_4px_25px_rgba(0,0,0,0.5)] flex flex-col gap-2">
+                {/* Micro Status Bar */}
+                <div className="flex items-center justify-between px-1 text-[10px] font-mono">
+                  <div className="flex items-center gap-1.5 text-cyan-300">
+                    <Sparkles size={12} className="text-cyan-400 animate-spin" />
+                    <span className="font-hud tracking-wider font-extrabold text-[10px]">
+                      TACTICAL SUBSYSTEMS MATRIX
+                    </span>
+                  </div>
+                  <span className="text-slate-400 text-[9px] font-bold">
+                    MULTI-PHASE DOCK
+                  </span>
+                </div>
 
-                {/* 3. System */}
-                <button
-                  onClick={() => openHudModal("system")}
-                  className="py-1.5 px-2 rounded-xl bg-[#061024]/80 hover:bg-[#0d1a38] border border-cyan-500/30 hover:border-cyan-400/70 text-slate-300 hover:text-cyan-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-                  title="Open Hardware Diagnostics"
-                >
-                  <Cpu size={13} className="text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="font-semibold truncate">System</span>
-                  <span className="text-[10px] text-cyan-400/80 font-mono hidden xl:inline shrink-0">{systemMetrics.cpu}%</span>
-                </button>
-              </div>
+                {/* Row 1: Core Systems & Code Architecture */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                  {/* 1. Memory */}
+                  <button
+                    onClick={() => openHudModal("memory")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-purple-500/35 hover:border-purple-400/80 text-slate-300 hover:text-purple-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Neural Memory Matrix"
+                  >
+                    <BrainCircuit size={13} className="text-purple-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">Memory</span>
+                  </button>
 
-              {/* Row 2: Advanced Phases & Master HUD */}
-              <div className="grid grid-cols-3 gap-1.5 text-xs font-mono">
-                {/* 4. Desktop Vision (Phase 7) */}
-                <button
-                  onClick={() => openHudModal("vision")}
-                  className="py-1.5 px-2 rounded-xl bg-[#061024]/80 hover:bg-[#0d1a38] border border-emerald-500/30 hover:border-emerald-400/70 text-slate-300 hover:text-emerald-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-                  title="Open Phase 7 Desktop Vision Diagnostics"
-                >
-                  <Eye size={13} className="text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="font-semibold truncate">Vision AI</span>
-                </button>
+                  {/* 2. Chrono Hub */}
+                  <button
+                    onClick={() => openHudModal("timers")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-amber-500/35 hover:border-amber-400/80 text-slate-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Chrono Hub (Timers & Alarms)"
+                  >
+                    <Timer size={13} className="text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">Timers</span>
+                    {(activeTimers.length + activeAlarms.length + activeReminders.length) > 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+                    )}
+                  </button>
 
-                {/* 5. Autonomous Coding Agent (Phase 8) */}
-                <button
-                  onClick={() => openHudModal("agent")}
-                  className="py-1.5 px-2 rounded-xl bg-[#061024]/80 hover:bg-[#0d1a38] border border-rose-500/30 hover:border-rose-400/70 text-slate-300 hover:text-rose-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-                  title="Open Phase 8 Autonomous Agent Mission Control"
-                >
-                  <Bot size={13} className="text-rose-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="font-semibold truncate">Auto Agent</span>
-                </button>
+                  {/* 3. System Diagnostics */}
+                  <button
+                    onClick={() => openHudModal("system")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-cyan-500/35 hover:border-cyan-400/80 text-slate-300 hover:text-cyan-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Hardware Diagnostics"
+                  >
+                    <Cpu size={13} className="text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">System</span>
+                    <span className="text-[10px] text-cyan-400 font-mono hidden xl:inline shrink-0">{Math.round(systemMetrics.cpu)}%</span>
+                  </button>
 
-                {/* 6. All Systems Master HUD */}
-                <button
-                  onClick={() => openHudModal("all")}
-                  className="py-1.5 px-2 rounded-xl bg-[#061024]/80 hover:bg-[#0d1a38] border border-blue-500/30 hover:border-blue-400/70 text-slate-300 hover:text-blue-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-                  title="Open Complete Command HUD"
-                >
-                  <Layers size={13} className="text-blue-400 group-hover:scale-110 transition-transform shrink-0" />
-                  <span className="font-semibold truncate">All HUD</span>
-                </button>
+                  {/* 4. Files & Codebase Hub (Phase 4) */}
+                  <button
+                    onClick={() => openHudModal("files")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-emerald-500/35 hover:border-emerald-400/80 text-slate-300 hover:text-emerald-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Phase 4 Files & Codebase Hub"
+                  >
+                    <FolderGit2 size={13} className="text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">Files</span>
+                  </button>
+                </div>
+
+                {/* Row 2: Advanced Web, Vision, Agent & Master HUD */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                  {/* 5. Web & Weather Intel (Phase 5) */}
+                  <button
+                    onClick={() => openHudModal("web")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-cyan-500/35 hover:border-cyan-400/80 text-slate-300 hover:text-cyan-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Phase 5 Web & Weather Intelligence"
+                  >
+                    <Globe size={13} className="text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">Web</span>
+                  </button>
+
+                  {/* 6. Desktop Vision (Phase 7) */}
+                  <button
+                    onClick={() => openHudModal("vision")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-amber-500/35 hover:border-amber-400/80 text-slate-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Phase 7 Desktop Vision Diagnostics"
+                  >
+                    <Eye size={13} className="text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">Vision</span>
+                  </button>
+
+                  {/* 7. Autonomous Coding Agent (Phase 8) */}
+                  <button
+                    onClick={() => openHudModal("agent")}
+                    className="py-2 px-2 rounded-2xl bg-[#061024]/90 hover:bg-[#0d1a38] border border-rose-500/35 hover:border-rose-400/80 text-slate-300 hover:text-rose-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Phase 8 Autonomous Agent Mission Control"
+                  >
+                    <Bot size={13} className="text-rose-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-bold truncate">Agent</span>
+                  </button>
+
+                  {/* 8. All Systems Master HUD */}
+                  <button
+                    onClick={() => openHudModal("all")}
+                    className="py-2 px-2 rounded-2xl bg-gradient-to-r from-blue-900/60 to-cyan-900/60 hover:from-blue-800/80 hover:to-cyan-800/80 border border-blue-400/50 hover:border-cyan-300 text-cyan-100 flex items-center justify-center gap-1.5 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] active:scale-95"
+                    title="Open Complete Command HUD"
+                  >
+                    <Layers size={13} className="text-cyan-300 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="font-extrabold truncate">All HUD</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           {/* COLUMN 3: RIGHT DEDICATED FULL-HEIGHT CONVERSATION BOX */}
-          <div className="flex-1 xl:flex-[1.2] min-w-[380px] h-full flex flex-col overflow-hidden min-h-0">
+          <div className="flex-1 xl:flex-[1.3] min-w-[380px] h-full flex flex-col overflow-hidden min-h-0">
             {/* Tactical Command Console & Conversation Stream */}
-            <div className="flex-1 h-full rounded-3xl cyber-glass flex flex-col overflow-hidden shadow-[0_8px_35px_rgba(0,0,0,0.5)] border border-cyan-500/25 min-h-0">
+            <div className="relative flex-1 h-full rounded-3xl cyber-glass flex flex-col overflow-hidden shadow-[0_8px_35px_rgba(0,0,0,0.7)] border border-cyan-500/35 min-h-0 group">
+              
+              {/* Corner Tech Brackets */}
+              <div className="absolute top-2 left-2 text-[9px] font-mono text-cyan-400/40 select-none pointer-events-none">┌ CONSOLE</div>
+              <div className="absolute top-2 right-2 text-[9px] font-mono text-cyan-400/40 select-none pointer-events-none">STREAM // LIVE ┐</div>
+
               {/* Mission Log Header */}
-              <div className="px-5 py-3 border-b border-cyan-500/20 flex items-center justify-between bg-[#061024]/80 shrink-0">
+              <div className="px-5 py-3.5 border-b border-cyan-500/25 flex items-center justify-between bg-gradient-to-r from-[#061226]/90 via-[#071733]/90 to-[#050E22]/90 shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                  <MessageSquare size={15} className="text-cyan-400" />
-                  <span className="font-hud text-xs font-bold text-white tracking-wider">
-                    Tactical Mission Log
+                  <div className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+                  </div>
+                  <MessageSquare size={16} className="text-cyan-400" />
+                  <span className="font-hud text-xs font-black text-white tracking-widest uppercase">
+                    Tactical Mission Stream
                   </span>
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
-                    REAL-TIME STREAM
+                  <span className="text-[9px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-sm">
+                    {messages.length} ENTRIES
                   </span>
                 </div>
 
@@ -1780,7 +1865,7 @@ export default function Dashboard() {
                   {messages.length > 0 && (
                     <button
                       onClick={() => setMessages([])}
-                      className="text-slate-400 hover:text-rose-400 text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
+                      className="text-slate-400 hover:text-rose-400 text-[10px] font-mono flex items-center gap-1.5 transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30"
                       title="Clear console feed"
                     >
                       <Trash2 size={12} />
@@ -1793,19 +1878,30 @@ export default function Dashboard() {
               {/* Messages Container */}
               <div
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar min-h-0"
+                className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar min-h-0 bg-gradient-to-b from-transparent via-[#040A18]/50 to-[#020510]/80"
               >
                 {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 gap-3 py-8">
-                    <div className="w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                      <BrainCircuit size={28} />
+                  <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 gap-3.5 py-8">
+                    <div className="relative w-16 h-16 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-blue-600/30 border border-cyan-400/40 flex items-center justify-center text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.4)] animate-pulse">
+                      <BrainCircuit size={32} />
                     </div>
-                    <span className="font-hud text-sm font-bold text-white tracking-wider">
-                      J.A.R.V.I.S Neural Stream Armed &amp; Ready
+                    <span className="font-hud text-sm font-black text-white tracking-wider">
+                      J.A.R.V.I.S Neural Stream Armed &amp; Online
                     </span>
-                    <span className="text-xs text-slate-400 max-w-md leading-relaxed">
+                    <p className="text-xs text-slate-400 max-w-md leading-relaxed font-sans px-4">
                       Aap voice ya text ke zariye sawal pooch saktay hain, system diagnostic run karwa saktay hain, files manage kar saktay hain, aur automation tasks execute karwa saktay hain.
-                    </span>
+                    </p>
+                    <div className="flex items-center gap-2 text-[10px] font-mono text-cyan-400/80 pt-1">
+                      <span className="px-2 py-1 rounded-xl bg-cyan-950/60 border border-cyan-500/30">
+                        ⚡ Voice Ready
+                      </span>
+                      <span className="px-2 py-1 rounded-xl bg-cyan-950/60 border border-cyan-500/30">
+                        🧠 Dual Engine
+                      </span>
+                      <span className="px-2 py-1 rounded-xl bg-cyan-950/60 border border-cyan-500/30">
+                        🛡️ Biometrics OK
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   messages.map((msg) => (
@@ -1814,29 +1910,29 @@ export default function Dashboard() {
                       className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : "items-start"}`}
                     >
                       <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-lg ${
+                        className={`max-w-[85%] rounded-3xl px-4 py-3 text-xs leading-relaxed shadow-xl relative transition-all ${
                           msg.sender === "user"
-                            ? "bg-[#08152E]/95 from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-br-none border border-cyan-400/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-                            : "bg-[#08152E]/95 border border-cyan-500/35 text-slate-100 rounded-bl-none shadow-[0_0_20px_rgba(6,182,212,0.12)]"
+                            ? "bg-gradient-to-br from-cyan-600/90 via-blue-600/90 to-indigo-700/90 text-white rounded-br-none border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.35)]"
+                            : "bg-[#071530]/95 border border-cyan-500/40 text-slate-100 rounded-bl-none shadow-[0_0_25px_rgba(6,182,212,0.15)]"
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-4 mb-1.5 pb-1.5 border-b border-white/10 text-[9px] font-mono opacity-85">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold uppercase tracking-wider text-cyan-300">
-                              {msg.sender === "user" ? "AK" : "JARVIS"}
+                        <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-white/15 text-[9px] font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold uppercase tracking-widest text-cyan-300">
+                              {msg.sender === "user" ? "CREATOR // AK" : "JARVIS CORE"}
                             </span>
                             {msg.offline_mode && (
-                              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-bold">
                                 OFFLINE
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span>{msg.time}</span>
+                            <span className="text-slate-400 font-mono">{msg.time}</span>
                             <button
                               type="button"
                               onClick={() => handleCopyText(msg.text, msg.id)}
-                              className="p-1 rounded hover:bg-white/15 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer flex items-center gap-1 group/copy"
+                              className="p-1 rounded-lg hover:bg-white/20 text-slate-300 hover:text-cyan-200 transition-all cursor-pointer flex items-center gap-1 group/copy"
                               title="Copy message to clipboard"
                             >
                               {copiedMessageId === msg.id ? (
@@ -1850,7 +1946,7 @@ export default function Dashboard() {
                             </button>
                           </div>
                         </div>
-                        <div className="whitespace-pre-wrap selection:bg-cyan-500/40 font-sans">
+                        <div className="whitespace-pre-wrap selection:bg-cyan-500/40 font-sans text-xs">
                           {msg.text}
                         </div>
                       </div>
@@ -1874,7 +1970,7 @@ export default function Dashboard() {
                 )}
 
                 {loading && (
-                  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#08152E]/90 border border-cyan-400/40 text-xs text-cyan-300 w-fit shadow-[0_0_15px_rgba(6,182,212,0.25)] animate-pulse">
+                  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#08152E]/90 border border-cyan-400/50 text-xs text-cyan-300 w-fit shadow-[0_0_20px_rgba(6,182,212,0.3)] animate-pulse">
                     <Sparkles size={16} className="animate-spin text-cyan-400" />
                     <span className="font-mono">Neural heuristics reasoning &amp; tool execution in progress...</span>
                   </div>
@@ -1884,7 +1980,7 @@ export default function Dashboard() {
               {/* Chat Command Input Bar */}
               <form
                 onSubmit={handleSend}
-                className="p-3.5 border-t border-cyan-500/20 bg-[#061024]/90 flex items-center gap-2.5 shrink-0"
+                className="p-3.5 border-t border-cyan-500/25 bg-gradient-to-r from-[#061024]/95 via-[#071530]/95 to-[#040C1E]/95 flex items-center gap-2.5 shrink-0"
               >
                 <button
                   type="button"
@@ -1892,8 +1988,8 @@ export default function Dashboard() {
                   disabled={loading}
                   className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                     isListening
-                      ? "bg-rose-500 text-white border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.5)] animate-pulse"
-                      : "bg-[#09152B] text-cyan-300 border-cyan-500/35 hover:border-cyan-400 hover:bg-cyan-500/20 shadow-sm"
+                      ? "bg-rose-500 text-white border-rose-400 shadow-[0_0_22px_rgba(244,63,94,0.6)] animate-pulse"
+                      : "bg-[#09152B] text-cyan-300 border-cyan-500/40 hover:border-cyan-400 hover:bg-cyan-500/20 shadow-sm"
                   }`}
                   title="Toggle Microphone"
                 >
@@ -1907,13 +2003,13 @@ export default function Dashboard() {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   disabled={loading}
-                  className="flex-1 bg-[#09152C] border border-cyan-500/30 rounded-2xl px-5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(6,182,212,0.25)] shadow-inner font-sans"
+                  className="flex-1 bg-[#09152C] border border-cyan-500/35 rounded-2xl px-5 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_18px_rgba(6,182,212,0.3)] shadow-inner font-sans transition-all"
                 />
 
                 <button
                   type="submit"
                   disabled={loading || !inputValue.trim()}
-                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 text-white font-bold text-xs font-mono flex items-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.35)]"
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 text-white font-black text-xs font-mono flex items-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95"
                 >
                   <Send size={14} />
                   <span>Execute</span>

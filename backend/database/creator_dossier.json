@@ -1,34 +1,24 @@
 {
   "personal": {
     "name": "Muhammad Akmal",
-    "preferred_name": "Akmal bhai",
+    "preferred_name": "Akmal Sir",
     "title": "Full Stack Developer & AI Engineer",
-    "bio": "I'm Muhammad Akmal, Creator and Master Architect of JARVIS AI Assistant System and full-stack JavaScript engineer who builds web applications from the ground up — database schema design, RESTful APIs, server-side logic, and responsive user interfaces.\n\nPrimary focus on Next.js, React, Node.js, and MongoDB. I emphasize clean code, structured commit histories, clear documentation, and seamless deployments.",
+    "bio": "Creator and Master Architect of JARVIS AI System.\nI’m Muhammad Akmal, a passionate Web Developer and Computer Science student. I specialize in building modern, responsive, and user-friendly web applications. Skilled in React, Next.js, JavaScript, and modern web technologies. I enjoy turning ideas into clean, functional, and visually appealing digital experiences. Always learning, building, and improving my development skills.",
     "location": "Faisalabad, Pakistan",
     "email": "",
     "phone": "",
     "avatar_url": "https://github.com/AkmalDoghar.png"
   },
   "social_profiles": {
-    "github": "https://github.com/AkmakDoghar",
-    "github_username": "AkmakDoghar",
-    "linkedin": "linkedin.com/in/muhammad-akmal-dev/",
+    "github": "https://github.com/AkmalDoghar",
+    "github_username": "AkmalDoghar",
+    "linkedin": "https://www.linkedin.com/in/muhammad-akmal-dev/",
     "portfolio": "https://akmalcode.vercel.app",
     "twitter": "",
     "youtube": "",
     "instagram": ""
   },
-  "tech_stack": [
-    "Python",
-    "FastAPI",
-    "Next.js",
-    "React",
-    "TypeScript",
-    "Tailwind CSS",
-    "AI/LLMs",
-    "Node.js",
-    "Git"
-  ],
+  "tech_stack": [],
   "coding_preferences": "Clean modular architecture, TypeScript strict, functional components, fast responsive UI, secure code",
   "projects": [
     {
@@ -39,60 +29,98 @@
   ],
   "career_summary": "Full Stack Developer & AI Engineer with expertise in building real-time autonomous agent systems, full-stack web applications, and intelligent developer tooling.",
   "online_synced_data": {
-    "last_synced": "2026-10-17 11:31:01",
-    "github_handle": "torvalds",
-    "github_bio": "",
-    "public_repos_count": 12,
-    "followers": 328068,
+    "last_synced": "2026-11-08 12:26:03",
+    "github_handle": "AkmalDoghar",
+    "github_bio": "Full-Stack Next.js Developer | Building fast, production-ready web applications",
+    "public_repos_count": 6,
+    "followers": 0,
     "recent_repos": [
       {
-        "name": "linux",
-        "description": "Linux kernel source tree",
-        "language": "C",
-        "stars": 252198,
-        "html_url": "https://github.com/torvalds/linux"
+        "name": "portfolio",
+        "description": "Modern developer portfolio built with Next.js, showcasing projects, skills, experience and web development services.",
+        "language": "JavaScript",
+        "stars": 0,
+        "html_url": "https://github.com/AkmalDoghar/portfolio"
       },
       {
-        "name": "AudioNoise",
-        "description": "Random digital audio effects",
-        "language": "C",
-        "stars": 4514,
-        "html_url": "https://github.com/torvalds/AudioNoise"
+        "name": "Assignments",
+        "description": "A collection of web development assignments and practice projects built while learning HTML, CSS, JavaScript and frontend development.",
+        "language": "JavaScript",
+        "stars": 1,
+        "html_url": "https://github.com/AkmalDoghar/Assignments"
       },
       {
-        "name": "ScrollWheel",
-        "description": "Minimalist RP2350 magnetic sensor scroll wheel toy project",
-        "language": "C",
-        "stars": 382,
-        "html_url": "https://github.com/torvalds/ScrollWheel"
+        "name": "AI-Post-Generator",
+        "description": "AI-powered developer content generator that turns GitHub activity into professional social media posts.",
+        "language": "JavaScript",
+        "stars": 0,
+        "html_url": "https://github.com/AkmalDoghar/AI-Post-Generator"
       },
       {
-        "name": "GuitarPedal",
-        "description": "Linus learns analog circuits",
-        "language": "C",
-        "stars": 2459,
-        "html_url": "https://github.com/torvalds/GuitarPedal"
+        "name": "chatify",
+        "description": "Full-stack real-time chat application with a modern client-server architecture.",
+        "language": "JavaScript",
+        "stars": 0,
+        "html_url": "https://github.com/AkmalDoghar/chatify"
       },
       {
-        "name": "uemacs",
-        "description": "Random version of microemacs with my private modificatons",
-        "language": "C",
-        "stars": 2168,
-        "html_url": "https://github.com/torvalds/uemacs"
+        "name": "weather-app",
+        "description": "Modern weather application built with Next.js, providing current weather, forecasts, air quality and location-based weather information.",
+        "language": "TypeScript",
+        "stars": 0,
+        "html_url": "https://github.com/AkmalDoghar/weather-app"
       },
       {
-        "name": "1590A",
-        "description": "Random odd guitar pedal design in kicad",
-        "language": "OpenSCAD",
-        "stars": 579,
-        "html_url": "https://github.com/torvalds/1590A"
+        "name": "AkmalDoghar",
+        "description": "No description",
+        "language": "Code",
+        "stars": 0,
+        "html_url": "https://github.com/AkmalDoghar/AkmalDoghar"
       }
     ],
-    "online_summary": "GitHub @torvalds synced: 12 public repos, 328068 followers."
+    "online_summary": "GitHub @AkmalDoghar synced: 6 public repos, 0 followers."
   },
   "ai_interaction_rules": {
-    "honorific": "Akmal bhai",
+    "honorific": "Akmal Sir",
     "tone": "Respectful, sharp, loyal, concise and proactive Roman Urdu",
-    "creator_authority": "Supreme authority - all high-risk actions authenticated exclusively for Akmal bhai."
-  }
+    "creator_authority": "Supreme authority - all high-risk actions authenticated exclusively for Akmal Sir."
+  },
+  "emails": [
+    {
+      "id": "email_1",
+      "label": "Personal Gmail",
+      "email": "ranaakmalr703@gmail.com",
+      "provider": "gmail",
+      "is_primary": true,
+      "inbox_url": "https://mail.google.com/mail/u/?authuser=ranaakmalr703%40gmail.com",
+      "notes": "Main personal Google account"
+    },
+    {
+      "id": "email_2",
+      "label": "Work & Business",
+      "email": "84pakarmy@gmail.com",
+      "provider": "gmail",
+      "is_primary": false,
+      "inbox_url": "https://mail.google.com/mail/u/?authuser=84pakarmy%40gmail.com",
+      "notes": "Work projects, clients and freelance inquiries"
+    },
+    {
+      "id": "email_3",
+      "label": "Developer & GitHub",
+      "email": "m.akmal.dev42@gmail.com",
+      "provider": "gmail",
+      "is_primary": false,
+      "inbox_url": "https://mail.google.com/mail/u/?authuser=m.akmal.dev42%40gmail.com",
+      "notes": "VCS, APIs, cloud consoles and developer accounts"
+    },
+    {
+      "id": "email_4",
+      "label": "Official / Secondary",
+      "email": "bc250211604mak@vu.edu.pk",
+      "provider": "gmail",
+      "is_primary": false,
+      "inbox_url": "https://mail.google.com/mail/u/?authuser=bc250211604mak%40vu.edu.pk",
+      "notes": "University Account for Study"
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 """
 JARVIS Voice Biometrics & Speaker Verification Engine
-Phase 3 Security Component: Authenticates Creator Akmal bhai via voiceprint biometrics.
+Phase 3 Security Component: Authenticates Creator Akmal Sir via voiceprint biometrics.
 Extracts acoustic voice features (pitch, formant energy, spectral distribution) and
 verifies incoming voice commands against enrolled creator voiceprints using cosine similarity.
 """
@@ -178,7 +178,7 @@ def get_voiceprint_status() -> Dict[str, Any]:
 
 def enroll_creator_voice(pcm_bytes: bytes, sample_rate: int = 16000, creator_name: str = "Muhammad Akmal") -> Dict[str, Any]:
     """
-    Enroll or update Akmal bhai's reference voiceprint.
+    Enroll or update Akmal Sir's reference voiceprint.
     Averages with existing samples for high stability and accuracy.
     """
     new_vec = _extract_acoustic_features(pcm_bytes, sample_rate)

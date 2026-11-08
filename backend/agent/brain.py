@@ -282,38 +282,38 @@ def get_spoken_acknowledgment(tool_name: str, tool_result: dict, is_urdu: bool) 
     if not tool_result.get("success", False):
         err = tool_result.get("error") or tool_result.get("result", {}).get("message") or "Action could not be completed"
         if is_urdu:
-            return f"Ji Akmal bhai, is action mein issue aya hai: {err}"
+            return f"Ji Akmal Sir, is action mein issue aya hai: {err}"
         return f"Sir, the action could not be completed: {err}"
 
     res_data = tool_result.get("result")
     res_dict = res_data if isinstance(res_data, dict) else tool_result
     if tool_name == "read_file":
         fname = res_dict.get("filename", "file")
-        return f"Ji Akmal bhai, {fname} read kar di hai aur screen par display kar di hai." if is_urdu else f"Yes sir, I have read {fname} and displayed it on your screen."
+        return f"Ji Akmal Sir, {fname} read kar di hai aur screen par display kar di hai." if is_urdu else f"Yes sir, I have read {fname} and displayed it on your screen."
     elif tool_name == "search_codebase":
-        return "Ji Akmal bhai, codebase search kar ke matches screen par display kar diye hain." if is_urdu else "Yes sir, I have searched the codebase and displayed the matches on your screen."
+        return "Ji Akmal Sir, codebase search kar ke matches screen par display kar diye hain." if is_urdu else "Yes sir, I have searched the codebase and displayed the matches on your screen."
     elif tool_name == "inspect_project":
-        return "Ji Akmal bhai, project inspect kar liya hai aur summary screen par show ho rahi hai." if is_urdu else "Yes sir, project architecture has been inspected and displayed."
+        return "Ji Akmal Sir, project inspect kar liya hai aur summary screen par show ho rahi hai." if is_urdu else "Yes sir, project architecture has been inspected and displayed."
     elif tool_name == "list_directory_files":
-        return "Ji Akmal bhai, directory files list kar di hain aur screen par show ho rahi hain." if is_urdu else "Yes sir, directory files have been listed on your screen."
+        return "Ji Akmal Sir, directory files list kar di hain aur screen par show ho rahi hain." if is_urdu else "Yes sir, directory files have been listed on your screen."
     elif tool_name == "run_git_status":
-        return "Ji Akmal bhai, git status check kar liya hai aur screen par show kar diya hai." if is_urdu else "Yes sir, git status has been checked and displayed."
+        return "Ji Akmal Sir, git status check kar liya hai aur screen par show kar diya hai." if is_urdu else "Yes sir, git status has been checked and displayed."
     elif tool_name == "run_git_diff":
-        return "Ji Akmal bhai, git diff check kar ke changes screen par display kar diye hain." if is_urdu else "Yes sir, git diff has been displayed on your screen."
+        return "Ji Akmal Sir, git diff check kar ke changes screen par display kar diye hain." if is_urdu else "Yes sir, git diff has been displayed on your screen."
     elif tool_name == "run_dev_tests":
-        return "Ji Akmal bhai, test suite run kar liya hai aur report screen par show ho rahi hai." if is_urdu else "Yes sir, developer test suite has completed."
+        return "Ji Akmal Sir, test suite run kar liya hai aur report screen par show ho rahi hai." if is_urdu else "Yes sir, developer test suite has completed."
     elif tool_name == "explain_code_error":
-        return "Ji Akmal bhai, error analyze kar ke solution screen par display kar diya hai." if is_urdu else "Yes sir, the code error has been analyzed."
+        return "Ji Akmal Sir, error analyze kar ke solution screen par display kar diya hai." if is_urdu else "Yes sir, the code error has been analyzed."
     elif tool_name == "modify_file":
         fname = res_dict.get("filename", "file")
-        return f"Ji Akmal bhai, {fname} update kar di hai aur changes screen par display kar diye hain." if is_urdu else f"Yes sir, {fname} has been updated successfully."
+        return f"Ji Akmal Sir, {fname} update kar di hai aur changes screen par display kar diye hain." if is_urdu else f"Yes sir, {fname} has been updated successfully."
     elif tool_name == "create_file":
         fname = res_dict.get("filename", "file")
-        return f"Ji Akmal bhai, {fname} create kar di hai." if is_urdu else f"Yes sir, {fname} has been created."
+        return f"Ji Akmal Sir, {fname} create kar di hai." if is_urdu else f"Yes sir, {fname} has been created."
     elif tool_name == "create_folder":
-        return "Ji Akmal bhai, folder create kar diya hai." if is_urdu else "Yes sir, the folder has been created."
+        return "Ji Akmal Sir, folder create kar diya hai." if is_urdu else "Yes sir, the folder has been created."
     elif tool_name == "delete_file_or_folder":
-        return "Ji Akmal bhai, target file delete kar di hai." if is_urdu else "Yes sir, the target file has been removed."
+        return "Ji Akmal Sir, target file delete kar di hai." if is_urdu else "Yes sir, the target file has been removed."
     elif tool_name == "open_application":
         app = tool_result.get("target") or "application"
         return f"Ji sir, {app} open kar di hai." if is_urdu else f"Yes sir, {app} has been opened."
@@ -332,62 +332,62 @@ def get_spoken_acknowledgment(tool_name: str, tool_result: dict, is_urdu: bool) 
         return "Ji sir, website open kar di hai." if is_urdu else "Yes sir, the website has been opened."
     elif tool_name == "open_chrome_profile":
         prof = res_dict.get("profile_name") or "Chrome"
-        return f"Ji Akmal bhai, Google Chrome '{prof}' profile ke sath open kar diya hai." if is_urdu else f"Yes sir, Google Chrome opened with profile '{prof}'."
+        return f"Ji Akmal Sir, Google Chrome '{prof}' profile ke sath open kar diya hai." if is_urdu else f"Yes sir, Google Chrome opened with profile '{prof}'."
     elif tool_name == "play_youtube_video":
         title = res_dict.get("title") or res_dict.get("query") or "video"
         prof = res_dict.get("profile")
         prof_txt = f" ({prof} profile mein)" if prof else ""
-        return f"Ji Akmal bhai, YouTube par '{title}' play kar diya hai{prof_txt}." if is_urdu else f"Yes sir, playing '{title}' on YouTube{prof_txt}."
+        return f"Ji Akmal Sir, YouTube par '{title}' play kar diya hai{prof_txt}." if is_urdu else f"Yes sir, playing '{title}' on YouTube{prof_txt}."
     elif tool_name == "analyze_website":
         title = res_dict.get("title") or res_dict.get("domain") or "website"
         summary = res_dict.get("summary") or ""
         short_sum = summary[:120] + "..." if len(summary) > 120 else summary
-        return f"Ji Akmal bhai, {title} open kar ke analyze kar liya hai: {short_sum}" if is_urdu else f"Yes sir, analyzed {title}: {short_sum}"
+        return f"Ji Akmal Sir, {title} open kar ke analyze kar liya hai: {short_sum}" if is_urdu else f"Yes sir, analyzed {title}: {short_sum}"
     elif tool_name == "list_google_accounts":
         count = res_dict.get("count", 4)
-        return f"Ji Akmal bhai, aap ke system par {count} Google accounts connect hain." if is_urdu else f"Yes sir, {count} Google accounts found on this system."
+        return f"Ji Akmal Sir, aap ke system par {count} Google accounts connect hain." if is_urdu else f"Yes sir, {count} Google accounts found on this system."
     elif tool_name == "list_chrome_bookmarks":
         count = res_dict.get("count", 0)
-        return f"Ji Akmal bhai, aap ke {count} Chrome bookmarks find kar liye hain aur screen par display kar diye hain." if is_urdu else f"Yes sir, found {count} Chrome bookmarks and displayed them on screen."
+        return f"Ji Akmal Sir, aap ke {count} Chrome bookmarks find kar liye hain aur screen par display kar diye hain." if is_urdu else f"Yes sir, found {count} Chrome bookmarks and displayed them on screen."
     elif tool_name == "search_chrome_history":
         count = res_dict.get("count", 0)
-        return f"Ji Akmal bhai, Chrome history search kar ke matches screen par display kar diye hain." if is_urdu else f"Yes sir, searched Chrome history and displayed matching results."
+        return f"Ji Akmal Sir, Chrome history search kar ke matches screen par display kar diye hain." if is_urdu else f"Yes sir, searched Chrome history and displayed matching results."
     elif tool_name == "open_smart_website":
         title = res_dict.get("title") or res_dict.get("url") or "website"
         source = res_dict.get("source", "")
         prof = res_dict.get("profile") or ""
         prof_txt = f" ({prof} account mein)" if prof else ""
         if source == "bookmark":
-            return f"Ji Akmal bhai, aap ke bookmark se '{title}' open kar diya hai{prof_txt}." if is_urdu else f"Yes sir, opened '{title}' from your bookmarks{prof_txt}."
+            return f"Ji Akmal Sir, aap ke bookmark se '{title}' open kar diya hai{prof_txt}." if is_urdu else f"Yes sir, opened '{title}' from your bookmarks{prof_txt}."
         elif source == "history":
-            return f"Ji Akmal bhai, Chrome history se '{title}' open kar diya hai{prof_txt}." if is_urdu else f"Yes sir, opened '{title}' from your browsing history{prof_txt}."
-        return f"Ji Akmal bhai, '{title}' open kar diya hai{prof_txt}." if is_urdu else f"Yes sir, opened '{title}'{prof_txt}."
+            return f"Ji Akmal Sir, Chrome history se '{title}' open kar diya hai{prof_txt}." if is_urdu else f"Yes sir, opened '{title}' from your browsing history{prof_txt}."
+        return f"Ji Akmal Sir, '{title}' open kar diya hai{prof_txt}." if is_urdu else f"Yes sir, opened '{title}'{prof_txt}."
     elif tool_name == "send_whatsapp_message":
         if not res_dict.get("success", True):
             err_msg = res_dict.get("message") or res_dict.get("error") or "WhatsApp load hone mein waqt le raha hai."
-            return f"Ji Akmal bhai, {err_msg}" if is_urdu else f"Sir, {err_msg}"
+            return f"Ji Akmal Sir, {err_msg}" if is_urdu else f"Sir, {err_msg}"
         contact = res_dict.get("contact") or "contact"
         msg_text = (res_dict.get("message_text") or "").strip()
         was_fmt = res_dict.get("was_formatted", False)
         plat = res_dict.get("platform", "desktop")
         plat_str = "WhatsApp Web" if plat == "web" else "WhatsApp"
         if was_fmt and msg_text:
-            return f"Ji Akmal bhai, {plat_str} par {contact} ke liye message format aur correct kar ke draft kar diya hai:\n\n\"{msg_text}\"\n\nKya main ise send kar doon?" if is_urdu else f"Yes sir, formatted and drafted message on {plat_str} for {contact}:\n\n\"{msg_text}\"\n\nShall I send it?"
+            return f"Ji Akmal Sir, {plat_str} par {contact} ke liye message format aur correct kar ke draft kar diya hai:\n\n\"{msg_text}\"\n\nKya main ise send kar doon?" if is_urdu else f"Yes sir, formatted and drafted message on {plat_str} for {contact}:\n\n\"{msg_text}\"\n\nShall I send it?"
         elif msg_text:
-            return f"Ji Akmal bhai, {plat_str} par {contact} ki chat mein message draft kar diya hai:\n\n\"{msg_text}\"\n\nKya main ise send kar doon?" if is_urdu else f"Yes sir, drafted message on {plat_str} for {contact}:\n\n\"{msg_text}\"\n\nShall I send it?"
-        return f"Ji Akmal bhai, {plat_str} par {contact} ki chat mein message draft kar diya hai. Kya main send kar doon?" if is_urdu else f"Yes sir, drafted message on {plat_str} for {contact}. Shall I send it?"
+            return f"Ji Akmal Sir, {plat_str} par {contact} ki chat mein message draft kar diya hai:\n\n\"{msg_text}\"\n\nKya main ise send kar doon?" if is_urdu else f"Yes sir, drafted message on {plat_str} for {contact}:\n\n\"{msg_text}\"\n\nShall I send it?"
+        return f"Ji Akmal Sir, {plat_str} par {contact} ki chat mein message draft kar diya hai. Kya main send kar doon?" if is_urdu else f"Yes sir, drafted message on {plat_str} for {contact}. Shall I send it?"
     elif tool_name == "confirm_send_whatsapp":
         plat = res_dict.get("platform", "desktop")
         plat_str = "WhatsApp Web" if plat == "web" else "WhatsApp"
-        return f"Ji Akmal bhai, {plat_str} message send kar diya hai!" if is_urdu else f"Yes sir, the {plat_str} message has been sent!"
+        return f"Ji Akmal Sir, {plat_str} message send kar diya hai!" if is_urdu else f"Yes sir, the {plat_str} message has been sent!"
     elif tool_name == "open_whatsapp_web":
-        return res_dict.get("message", "Ji Akmal bhai, WhatsApp Web open kar diya hai.")
+        return res_dict.get("message", "Ji Akmal Sir, WhatsApp Web open kar diya hai.")
     elif tool_name in ("post_whatsapp_status", "customize_whatsapp_status"):
         stype = res_dict.get("type", "status")
         stext = (res_dict.get("status_text") or "").strip()
         if stype == "video":
             return (
-                "Ji Akmal bhai, video status ready kar di hai. Kya main ise upload kar doon ya na karoon?"
+                "Ji Akmal Sir, video status ready kar di hai. Kya main ise upload kar doon ya na karoon?"
                 if is_urdu else
                 "Yes sir, the video status is ready. Shall I upload it or cancel?"
             )
@@ -395,59 +395,59 @@ def get_spoken_acknowledgment(tool_name: str, tool_result: dict, is_urdu: bool) 
             if stext:
                 clean_speech = " ".join(part.strip() for part in stext.replace('"', '').replace('✨', '').replace('🌿', '').replace('🌸', '').replace('🤲', '').splitlines() if part.strip())
                 return (
-                    f"Ji Akmal bhai, status ka background color, font aur text update kar diya hai: \"{clean_speech}\". Kya main ise upload kar doon ya na karoon?"
+                    f"Ji Akmal Sir, status ka background color, font aur text update kar diya hai: \"{clean_speech}\". Kya main ise upload kar doon ya na karoon?"
                     if is_urdu else
                     f"Yes sir, updated the status style and text: \"{clean_speech}\". Shall I upload it or cancel?"
                 )
             return (
-                "Ji Akmal bhai, status ka background color aur font update kar diya hai. Kya main ise upload kar doon ya na karoon?"
+                "Ji Akmal Sir, status ka background color aur font update kar diya hai. Kya main ise upload kar doon ya na karoon?"
                 if is_urdu else
                 "Yes sir, updated the status background and font. Shall I upload it or cancel?"
             )
         if stext:
             clean_speech = " ".join(part.strip() for part in stext.replace('"', '').replace('✨', '').replace('🌿', '').replace('🌸', '').replace('🤲', '').splitlines() if part.strip())
             return (
-                f"Ji Akmal bhai, status ready hai. Status yeh hai: \"{clean_speech}\". Kya main ise upload kar doon ya na karoon?"
+                f"Ji Akmal Sir, status ready hai. Status yeh hai: \"{clean_speech}\". Kya main ise upload kar doon ya na karoon?"
                 if is_urdu else
                 f"Yes sir, the status is ready. It says: \"{clean_speech}\". Shall I upload it or not?"
             )
         return (
-            "Ji Akmal bhai, status ready hai. Kya main ise upload kar doon ya na karoon?"
+            "Ji Akmal Sir, status ready hai. Kya main ise upload kar doon ya na karoon?"
             if is_urdu else
             "Yes sir, the status is ready. Shall I upload it or not?"
         )
     elif tool_name == "confirm_post_whatsapp_status":
-        return "Ji Akmal bhai, WhatsApp status kamyabi se upload kar diya hai!" if is_urdu else "Yes sir, your WhatsApp status has been posted!"
+        return "Ji Akmal Sir, WhatsApp status kamyabi se upload kar diya hai!" if is_urdu else "Yes sir, your WhatsApp status has been posted!"
     elif tool_name == "delete_whatsapp_status":
-        return "Ji Akmal bhai, WhatsApp status delete kar diya hai." if is_urdu else "Yes sir, your WhatsApp status has been deleted."
+        return "Ji Akmal Sir, WhatsApp status delete kar diya hai." if is_urdu else "Yes sir, your WhatsApp status has been deleted."
     elif tool_name == "discard_whatsapp_status":
-        return "Ji Akmal bhai, WhatsApp status draft discard kar diya hai aur Chats screen par wapis aa gaye hain." if is_urdu else "Yes sir, discarded the WhatsApp status draft and returned to Chats."
+        return "Ji Akmal Sir, WhatsApp status draft discard kar diya hai aur Chats screen par wapis aa gaye hain." if is_urdu else "Yes sir, discarded the WhatsApp status draft and returned to Chats."
     elif tool_name == "make_whatsapp_call":
         contact = res_dict.get("contact", "contact")
         ctype = res_dict.get("call_type", "voice")
         call_str = "video call" if ctype == "video" else "voice call"
-        return f"Ji Akmal bhai, {contact} ko WhatsApp {call_str} mila di hai." if is_urdu else f"Yes sir, dialed WhatsApp {ctype} call for {contact}."
+        return f"Ji Akmal Sir, {contact} ko WhatsApp {call_str} mila di hai." if is_urdu else f"Yes sir, dialed WhatsApp {ctype} call for {contact}."
     elif tool_name == "end_whatsapp_call":
-        return "Ji Akmal bhai, WhatsApp call disconnect kar di hai." if is_urdu else "Yes sir, WhatsApp call has been ended."
+        return "Ji Akmal Sir, WhatsApp call disconnect kar di hai." if is_urdu else "Yes sir, WhatsApp call has been ended."
     elif tool_name == "toggle_whatsapp_call_mute":
-        return "Ji Akmal bhai, call microphone state toggle kar di hai." if is_urdu else "Yes sir, microphone state toggled."
+        return "Ji Akmal Sir, call microphone state toggle kar di hai." if is_urdu else "Yes sir, microphone state toggled."
     elif tool_name == "save_contact":
         cname = res_dict.get("name") or "contact"
-        return f"Ji Akmal bhai, {cname} ka contact number address book mein save kar liya hai." if is_urdu else f"Yes sir, saved contact for {cname}."
+        return f"Ji Akmal Sir, {cname} ka contact number address book mein save kar liya hai." if is_urdu else f"Yes sir, saved contact for {cname}."
     elif tool_name == "list_contacts":
-        return "Ji Akmal bhai, saved contacts screen par show kar diye hain." if is_urdu else "Yes sir, listing saved contacts."
+        return "Ji Akmal Sir, saved contacts screen par show kar diye hain." if is_urdu else "Yes sir, listing saved contacts."
     elif tool_name == "open_in_vscode":
         target = res_dict.get("name") or "project"
-        return f"Ji Akmal bhai, {target} VS Code mein open kar diya hai." if is_urdu else f"Yes sir, opened {target} in Visual Studio Code."
+        return f"Ji Akmal Sir, {target} VS Code mein open kar diya hai." if is_urdu else f"Yes sir, opened {target} in Visual Studio Code."
     elif tool_name == "open_file_in_browser":
         target = res_dict.get("filename") or "page"
-        return f"Ji Akmal bhai, {target} browser mein run kar diya hai." if is_urdu else f"Yes sir, opened {target} in your browser."
+        return f"Ji Akmal Sir, {target} browser mein run kar diya hai." if is_urdu else f"Yes sir, opened {target} in your browser."
     elif tool_name == "start_local_server":
         url = res_dict.get("url", "localhost")
-        return f"Ji Akmal bhai, local server {url} par start kar diya hai." if is_urdu else f"Yes sir, local server started on {url}."
+        return f"Ji Akmal Sir, local server {url} par start kar diya hai." if is_urdu else f"Yes sir, local server started on {url}."
     elif tool_name == "open_in_terminal":
         target = os.path.basename(res_dict.get("path", "folder"))
-        return f"Ji Akmal bhai, {target} ka terminal open kar diya hai." if is_urdu else f"Yes sir, terminal opened in {target}."
+        return f"Ji Akmal Sir, {target} ka terminal open kar diya hai." if is_urdu else f"Yes sir, terminal opened in {target}."
     elif tool_name == "open_creator_link":
         plat = res_dict.get("platform") or "portfolio"
         inspect_active = res_dict.get("inspect", False) or "inspect" in res_dict.get("message", "").lower()
@@ -455,58 +455,58 @@ def get_spoken_acknowledgment(tool_name: str, tool_result: dict, is_urdu: bool) 
             return f"Ji sir, {plat} Developer Tools (Inspect mode) ke sath open kar diya hai." if is_urdu else f"Yes sir, {plat} opened with Developer Tools active."
         return f"Ji sir, {plat} open kar diya hai." if is_urdu else f"Yes sir, {plat} has been opened."
     elif tool_name == "search_web":
-        return "Ji Akmal bhai, internet par search kar ke details screen par show kar di hain." if is_urdu else "Yes sir, web search completed."
+        return "Ji Akmal Sir, internet par search kar ke details screen par show kar di hain." if is_urdu else "Yes sir, web search completed."
     elif tool_name == "get_weather":
         spoken = res_dict.get("spoken_summary")
         if spoken and is_urdu:
-            return f"Ji Akmal bhai, {spoken}"
+            return f"Ji Akmal Sir, {spoken}"
         return f"Weather report for {res_dict.get('city', 'your city')} is displayed on screen."
     elif tool_name == "read_webpage":
-        return "Ji Akmal bhai, webpage read kar ke content screen par display kar diya hai." if is_urdu else "Yes sir, webpage content has been retrieved."
+        return "Ji Akmal Sir, webpage read kar ke content screen par display kar diya hai." if is_urdu else "Yes sir, webpage content has been retrieved."
     elif tool_name == "get_system_status":
-        return "Ji Akmal bhai, system metrics check kar liye hain." if is_urdu else "Yes sir, system status is displayed."
+        return "Ji Akmal Sir, system metrics check kar liye hain." if is_urdu else "Yes sir, system status is displayed."
     elif tool_name == "get_open_windows":
         return "Ji sir, open windows screen par list kar di hain." if is_urdu else "Yes sir, open windows are listed."
     elif tool_name == "set_timer":
-        return "Ji Akmal bhai, timer start kar diya hai." if is_urdu else "Yes sir, timer has been started."
+        return "Ji Akmal Sir, timer start kar diya hai." if is_urdu else "Yes sir, timer has been started."
     elif tool_name == "set_alarm":
-        return "Ji Akmal bhai, alarm set kar diya hai." if is_urdu else "Yes sir, alarm has been set."
+        return "Ji Akmal Sir, alarm set kar diya hai." if is_urdu else "Yes sir, alarm has been set."
     elif tool_name == "set_reminder":
-        return "Ji Akmal bhai, reminder note kar liya hai." if is_urdu else "Yes sir, reminder has been scheduled."
+        return "Ji Akmal Sir, reminder note kar liya hai." if is_urdu else "Yes sir, reminder has been scheduled."
     elif tool_name == "get_creator_accounts_info":
-        return "Ji Akmal bhai, aap ke connected accounts screen par display kar diye hain." if is_urdu else "Yes sir, your connected accounts are displayed on screen."
+        return "Ji Akmal Sir, aap ke connected accounts screen par display kar diye hain." if is_urdu else "Yes sir, your connected accounts are displayed on screen."
     elif tool_name == "inspect_creator_account":
         plat = res_dict.get("platform") or "account"
-        return f"Ji Akmal bhai, {plat.capitalize()} account inspect kar ke live stats sync kar diye hain." if is_urdu else f"Yes sir, {plat.capitalize()} account inspected and synchronized."
+        return f"Ji Akmal Sir, {plat.capitalize()} account inspect kar ke live stats sync kar diye hain." if is_urdu else f"Yes sir, {plat.capitalize()} account inspected and synchronized."
     elif tool_name == "draft_social_post":
         plat = res_dict.get("platform") or "social media"
-        return f"Ji Akmal bhai, {plat.capitalize()} ke liye post draft kar di hai aur screen par show ho rahi hai." if is_urdu else f"Yes sir, drafted post for {plat.capitalize()}."
+        return f"Ji Akmal Sir, {plat.capitalize()} ke liye post draft kar di hai aur screen par show ho rahi hai." if is_urdu else f"Yes sir, drafted post for {plat.capitalize()}."
     elif tool_name == "publish_social_post":
         plat = res_dict.get("platform") or "social media"
-        return f"Ji Akmal bhai, post clipboard par copy kar di hai aur {plat.capitalize()} open kar diya hai." if is_urdu else f"Yes sir, post copied to clipboard and {plat.capitalize()} opened in browser."
+        return f"Ji Akmal Sir, post clipboard par copy kar di hai aur {plat.capitalize()} open kar diya hai." if is_urdu else f"Yes sir, post copied to clipboard and {plat.capitalize()} opened in browser."
     elif tool_name == "sync_creator_online_presence":
-        return "Ji Akmal bhai, aap ka online footprint aur GitHub repos sync kar diye hain." if is_urdu else "Yes sir, your online footprint has been synced."
+        return "Ji Akmal Sir, aap ka online footprint aur GitHub repos sync kar diye hain." if is_urdu else "Yes sir, your online footprint has been synced."
     elif tool_name == "get_creator_dossier":
-        return "Ji Akmal bhai, aap ka complete digital dossier screen par load kar diya hai." if is_urdu else "Yes sir, your digital dossier is loaded."
+        return "Ji Akmal Sir, aap ka complete digital dossier screen par load kar diya hai." if is_urdu else "Yes sir, your digital dossier is loaded."
     elif tool_name == "remember_information":
         item_text = res_dict.get("content", "instruction")
-        return f"Ji Akmal bhai, '{item_text}' ko memory mein save kar liya hai." if is_urdu else f"Yes sir, saved '{item_text}' to long-term memory."
+        return f"Ji Akmal Sir, '{item_text}' ko memory mein save kar liya hai." if is_urdu else f"Yes sir, saved '{item_text}' to long-term memory."
     elif tool_name == "recall_memories":
         count = res_dict.get("count", 0)
-        return f"Ji Akmal bhai, memory matrix se {count} items retrieve kar liye hain." if is_urdu else f"Yes sir, retrieved {count} memories from the matrix."
+        return f"Ji Akmal Sir, memory matrix se {count} items retrieve kar liye hain." if is_urdu else f"Yes sir, retrieved {count} memories from the matrix."
     elif tool_name == "forget_memory":
-        return "Ji Akmal bhai, memory update kar di hai." if is_urdu else "Yes sir, memory updated."
+        return "Ji Akmal Sir, memory update kar di hai." if is_urdu else "Yes sir, memory updated."
 
     # Generic fallback
     if is_urdu:
-        return "Ji Akmal bhai, kaam kar diya hai."
+        return "Ji Akmal Sir, kaam kar diya hai."
     return "Yes sir, task completed."
 
 
 def get_conversational_spoken_text(reply: str, is_urdu: bool) -> str:
     """Extract a clean, concise spoken sentence for TTS from conversational reply."""
     if not reply:
-        return "Ji Akmal bhai, main sun raha hoon." if is_urdu else "Yes sir, I am listening."
+        return "Ji Akmal Sir, main sun raha hoon." if is_urdu else "Yes sir, I am listening."
     # Strip code blocks
     cleaned = re.sub(r'```[\s\S]*?```', '', reply)
     # Strip inline backticks
@@ -519,7 +519,7 @@ def get_conversational_spoken_text(reply: str, is_urdu: bool) -> str:
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
 
     if not cleaned:
-        return "Ji Akmal bhai, code aur details screen par display kar di hain." if is_urdu else "Yes sir, details are displayed on your screen."
+        return "Ji Akmal Sir, code aur details screen par display kar di hain." if is_urdu else "Yes sir, details are displayed on your screen."
 
     # If cleaned text is within reasonable spoken length (e.g. <= 160 chars), return it
     if len(cleaned) <= 160:
@@ -906,13 +906,13 @@ SYSTEM_PROMPT = (
     "   * If the message is rough, shorthand, unpunctuated, or has typos/grammar mistakes (e.g. 'kl milte h tm pr ajana', 'aslam o alkm kdr ho', 'i reached home will call u'): automatically correct and polish it into proper, clean, respectful, well-formatted text (e.g. 'Assalam-o-Alaikum, kidhar hain aap?', 'Kal meeting hai, waqt par pohanch jana.') while strictly preserving the user's intent and language (Urdu, Roman Urdu, or English). "
     "2) ALWAYS call `send_whatsapp_message` first with `contact_name_or_phone` and the refined `message`. If the user specifically mentions WhatsApp Web or browser, set `platform='web'`. If the user says 'WhatsApp Web kholo' or 'open WhatsApp Web', call `open_whatsapp_web`. "
     "3) NEVER call `confirm_send_whatsapp` in the same turn! "
-    "4) In your response, clearly state the final drafted message: 'Ji Akmal bhai, message format/check kar ke Ali ke liye draft kar diya hai: \"[refined message]\". Kya main ise send kar doon?' "
+    "4) In your response, clearly state the final drafted message: 'Ji Akmal Sir, message format/check kar ke Ali ke liye draft kar diya hai: \"[refined message]\". Kya main ise send kar doon?' "
     "5) Call `confirm_send_whatsapp` ONLY when the user subsequently confirms with 'send kar do', 'bhej do', 'send it', 'ab bhej do', etc. `confirm_send_whatsapp` seamlessly sends the message whether on WhatsApp Desktop or WhatsApp Web. To save a contact's phone number call `save_contact`. "
     "- WHATSAPP STATUS (CRITICAL APPROVAL, CUSTOMIZATION & DELETION WORKFLOW): "
     "1) When the user asks to post, set, or create a WhatsApp status (e.g. 'status lagao', 'mera status lagao', 'Islamic status lagao', 'Saturday status lagao', 'acha status lagao', 'TikTok status lagao', 'status upload karo'): "
     "ALWAYS call `post_whatsapp_status` first. This prepares and drafts the status with styling on WhatsApp Desktop and returns the status text. "
     "NEVER call `confirm_post_whatsapp_status` in the same turn! "
-    "You MUST tell the user that the status is ready, read the exact status text out to them, and ask if you should upload it or not ('Ji Akmal bhai, status ready hai. Status yeh hai: ... Kya main isay upload kar doon ya na karoon?'). "
+    "You MUST tell the user that the status is ready, read the exact status text out to them, and ask if you should upload it or not ('Ji Akmal Sir, status ready hai. Status yeh hai: ... Kya main isay upload kar doon ya na karoon?'). "
     "2) When the user asks to change, customize, or modify the WhatsApp status, background color, font, or text (e.g. 'ise change karo', 'font badlo', 'color change karo', 'background color change karo', 'kuch or acha status lagao', 'text change karo'): "
     "ALWAYS call `customize_whatsapp_status`! WhatsApp Desktop has built-in Palette and Font buttons that allow cycling through rich background colors and typography, and updating status text. NEVER claim that changing font or background color is impossible! Call `customize_whatsapp_status` with `cycle_background`, `cycle_font`, or `new_text`. "
     "3) If the user subsequently confirms (e.g. 'upload kar do', 'post kar do', 'laga do', 'haan upload karo', 'send kar do', 'upload it', 'ab laga do'): ONLY THEN call `confirm_post_whatsapp_status` to click Send and publish it. "
@@ -1174,7 +1174,7 @@ class JarvisBrain:
                 res_data = tool_res.get("result", {})
                 vid_title = res_data.get("title") or query
                 if is_ur:
-                    spoken = f"Ji Akmal bhai, YouTube par '{vid_title}' play kar diya hai."
+                    spoken = f"Ji Akmal Sir, YouTube par '{vid_title}' play kar diya hai."
                 else:
                     spoken = f"Yes sir, playing '{vid_title}' on YouTube."
 
@@ -1401,7 +1401,7 @@ class JarvisBrain:
         if user_is_roman:
             lang_instruction = (
                 "CRITICAL INSTRUCTION: The user is speaking/typing in Roman Urdu (Urdu written in English/Latin alphabet, e.g. 'youtube per ja ke song search kro' or 'chrome kholo'). "
-                "You MUST reply strictly in natural, friendly Roman Urdu (e.g. 'Ji sir, YouTube par song search kar diya hai' or 'Ji Akmal bhai, open kar diya hai'). "
+                "You MUST reply strictly in natural, friendly Roman Urdu (e.g. 'Ji sir, YouTube par song search kar diya hai' or 'Ji Akmal Sir, open kar diya hai'). "
                 "DO NOT reply in pure English! DO NOT reply in Urdu Arabic script! Your reply MUST be in Roman Urdu matching the user perfectly."
             )
         else:
@@ -1546,7 +1546,7 @@ class JarvisBrain:
                             # If action requires user confirmation or PIN
                             if tool_result.get("status") == "PENDING_CONFIRMATION":
                                 pending_spoken = (
-                                    "Ji Akmal bhai, is action ke liye security confirmation aur PIN darkar hai."
+                                    "Ji Akmal Sir, is action ke liye security confirmation aur PIN darkar hai."
                                     if (user_is_roman or response_language == "ur")
                                     else "Security confirmation and PIN required."
                                 )
@@ -1608,11 +1608,11 @@ class JarvisBrain:
                                 else:
                                     reply = f"Completed {', '.join(successful_tools)}, but encountered an error: {failed_tools[0][1]}"
                             elif "search_web" in successful_tools and "create_file" in successful_tools:
-                                reply = "Ji Akmal bhai, internet par search kar ke file create kar di hai aur details save kar di hain." if user_is_roman or response_language == "ur" else "Searched online and saved details to file successfully."
+                                reply = "Ji Akmal Sir, internet par search kar ke file create kar di hai aur details save kar di hain." if user_is_roman or response_language == "ur" else "Searched online and saved details to file successfully."
                             elif "create_folder" in successful_tools and "create_file" in successful_tools:
-                                reply = "Ji Akmal bhai, folder aur files dono kamyabi se create kar diye hain." if user_is_roman or response_language == "ur" else "Folder and files have been created successfully."
+                                reply = "Ji Akmal Sir, folder aur files dono kamyabi se create kar diye hain." if user_is_roman or response_language == "ur" else "Folder and files have been created successfully."
                             elif ("open_in_vscode" in successful_tools or "open_application" in successful_tools) and ("open_file_in_browser" in successful_tools or "open_website" in successful_tools):
-                                reply = "Ji Akmal bhai, project VS Code mein open kar diya hai aur browser mein bhi run kar diya hai." if user_is_roman or response_language == "ur" else "Opened project in VS Code and launched in browser successfully."
+                                reply = "Ji Akmal Sir, project VS Code mein open kar diya hai aur browser mein bhi run kar diya hai." if user_is_roman or response_language == "ur" else "Opened project in VS Code and launched in browser successfully."
                             elif last_tool_result and last_tool_result.get("result", {}).get("message"):
                                 reply = last_tool_result["result"]["message"]
                             elif user_is_roman or response_language == "ur":
@@ -1674,13 +1674,13 @@ class JarvisBrain:
                     if len(executed_tools_history) > 1:
                         successful_tools = [t[0] for t in executed_tools_history if t[1].get("success")]
                         if "search_web" in successful_tools and "create_file" in successful_tools:
-                            spoken_reply = "Ji Akmal bhai, search kar ke file create kar di hai." if is_ur else "Yes sir, searched web and created the file."
+                            spoken_reply = "Ji Akmal Sir, search kar ke file create kar di hai." if is_ur else "Yes sir, searched web and created the file."
                         elif "create_folder" in successful_tools and "create_file" in successful_tools:
-                            spoken_reply = "Ji Akmal bhai, folder aur files dono create kar diye hain." if is_ur else "Yes sir, the folder and files have both been created."
+                            spoken_reply = "Ji Akmal Sir, folder aur files dono create kar diye hain." if is_ur else "Yes sir, the folder and files have both been created."
                         elif ("open_in_vscode" in successful_tools or "open_application" in successful_tools) and ("open_file_in_browser" in successful_tools or "open_website" in successful_tools):
-                            spoken_reply = "Ji Akmal bhai, project VS Code mein open kar diya hai aur browser mein bhi run kar diya hai." if is_ur else "Opened in VS Code and launched in browser."
+                            spoken_reply = "Ji Akmal Sir, project VS Code mein open kar diya hai aur browser mein bhi run kar diya hai." if is_ur else "Opened in VS Code and launched in browser."
                         elif successful_tools:
-                            spoken_reply = "Ji Akmal bhai, aap ke tasks execute kar diye hain." if is_ur else "Yes sir, your requested tasks have been completed."
+                            spoken_reply = "Ji Akmal Sir, aap ke tasks execute kar diye hain." if is_ur else "Yes sir, your requested tasks have been completed."
                         else:
                             spoken_reply = "Sir, action execute karne mein masla aya hai." if is_ur else "Sir, there was an issue executing the actions."
                     elif len(executed_tools_history) == 1:
@@ -1752,13 +1752,13 @@ class JarvisBrain:
 
                 fname = os.path.basename(target_folder) if target_folder else "App"
                 if opened_vs and opened_browser:
-                    res_text = f"Ji Akmal bhai, {fname} app create kar di hai, VS Code mein open kar diya hai aur browser mein bhi run kar diya hai!"
+                    res_text = f"Ji Akmal Sir, {fname} app create kar di hai, VS Code mein open kar diya hai aur browser mein bhi run kar diya hai!"
                 elif opened_vs:
-                    res_text = f"Ji Akmal bhai, {fname} app create kar di hai aur VS Code mein folder open kar diya hai!"
+                    res_text = f"Ji Akmal Sir, {fname} app create kar di hai aur VS Code mein folder open kar diya hai!"
                 elif opened_browser:
-                    res_text = f"Ji Akmal bhai, {fname} app create kar di hai aur browser mein run kar diya hai!"
+                    res_text = f"Ji Akmal Sir, {fname} app create kar di hai aur browser mein run kar diya hai!"
                 else:
-                    res_text = f"Ji Akmal bhai, {', '.join(successful_tools)} kamyabi se create kar diye hain."
+                    res_text = f"Ji Akmal Sir, {', '.join(successful_tools)} kamyabi se create kar diye hain."
 
                 return {
                     "response": res_text,

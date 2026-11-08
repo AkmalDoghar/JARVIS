@@ -116,7 +116,7 @@ def voice_listen(language: Literal["en-US", "en-GB", "ur-PK", "hi-IN", "en-IN"] 
     except UnauthorizedSpeakerError as error:
         raise HTTPException(
             status_code=403,
-            detail=f"Security Alert: Voice unrecognized. Access limited to Akmal bhai. ({error})",
+            detail=f"Security Alert: Voice unrecognized. Access limited to Akmal Sir. ({error})",
         )
     except OSError as error:
         raise HTTPException(
@@ -692,6 +692,74 @@ def api_sync_dossier(request: DossierSyncRequest):
     result = sync_creator_online(github_username=request.github_username)
     return {"status": "success" if result.get("success") else "error", "sync_result": result}
 
+class DossierEmailSaveRequest(BaseModel):
+    id: Optional[str] = None
+    label: str
+    email: str
+    provider: Optional[str] = "gmail"
+    is_primary: Optional[bool] = False
+    inbox_url: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class DossierEmailOpenRequest(BaseModel):
+    identifier: Optional[str] = "primary"
+    action: Optional[str] = "inbox"
+    recipient: Optional[str] = None
+
+class DossierEmailDeleteRequest(BaseModel):
+    id: str
+
+@app.get("/api/dossier/emails")
+def api_get_dossier_emails():
+    """Retrieve all creator registered emails."""
+    from backend.database.creator_dossier import get_creator_emails
+    return {"status": "success", "emails": get_creator_emails()}
+
+@app.post("/api/dossier/emails/save")
+def api_save_dossier_email(request: DossierEmailSaveRequest):
+    """Save/update creator email account in Creator Dossier."""
+    from backend.database.creator_dossier import save_creator_email
+    saved = save_creator_email(request.dict())
+    return {"status": "success", "email": saved, "message": f"Email account '{request.label}' saved."}
+
+@app.post("/api/dossier/emails/delete")
+def api_delete_dossier_email(request: DossierEmailDeleteRequest):
+    """Delete creator email account from Creator Dossier."""
+    from backend.database.creator_dossier import delete_creator_email
+    success = delete_creator_email(request.id)
+    return {"status": "success" if success else "not_found", "message": "Email deleted."}
+
+@app.post("/api/dossier/emails/open")
+def api_open_dossier_email(request: DossierEmailOpenRequest):
+    """Directly open an email inbox or compose window in default browser."""
+    from backend.tools.creator_tools import open_creator_email
+    res = open_creator_email(identifier=request.identifier, action=request.action, recipient=request.recipient)
+    return res
+
+class DossierRepoSaveRequest(BaseModel):
+    name: str
+    description: Optional[str] = "Project repository"
+    language: Optional[str] = "Code"
+    stars: Optional[int] = 0
+    html_url: Optional[str] = ""
+
+class DossierRepoDeleteRequest(BaseModel):
+    name: str
+
+@app.post("/api/dossier/repos/save")
+def api_save_dossier_repo(request: DossierRepoSaveRequest):
+    """Add or update repository in Creator Dossier."""
+    from backend.database.creator_dossier import save_creator_repo
+    entry = save_creator_repo(request.dict())
+    return {"status": "success", "repo": entry, "message": f"Repository '{request.name}' saved."}
+
+@app.post("/api/dossier/repos/delete")
+def api_delete_dossier_repo(request: DossierRepoDeleteRequest):
+    """Delete repository from Creator Dossier."""
+    from backend.database.creator_dossier import delete_creator_repo
+    success = delete_creator_repo(request.name)
+    return {"status": "success" if success else "not_found", "message": f"Repository '{request.name}' deleted."}
+
 
 # ─────────────────────────────────────────────
 # Phase 6B: Long-Term Memory Matrix Endpoints
@@ -885,6 +953,59 @@ def api_agent_stop(request: AgentStopRequest = None):
     from backend.agent.executor import global_agent_executor
     res = global_agent_executor.stop_execution()
     return res
+
+# ======================================================================
+# PHASE 4: FILES & CODEBASE TOOLS ENDPOINTS
+# ======================================================================
+
+@app.get("/api/files/inspect")
+def api_files_inspect(project_path: Optional[str] = None):
+    """Inspect project architecture, git branch/status, dependencies, and entry files."""
+    from backend.tools import code_tools
+    target = project_path or os.getcwd()
+    return code_tools.inspect_project(target)
+
+@app.get("/api/files/list")
+def api_files_list(directory_path: Optional[str] = None):
+    """List directory structure and files of approved project workspace."""
+    from backend.tools import code_tools
+    target = directory_path or os.getcwd()
+    return code_tools.list_directory_files(target)
+
+# ======================================================================
+# PHASE 5: WEB INTELLIGENCE & WEATHER ENDPOINTS
+# ======================================================================
+
+@app.get("/api/web/weather")
+def api_web_weather(city: str = "Islamabad"):
+    """Get live weather intelligence and metrics for specified city."""
+    from backend.tools import web_tools
+    return web_tools.get_weather(city)
+
+class WebSearchRequest(BaseModel):
+    query: str
+    max_results: Optional[int] = 5
+
+@app.post("/api/web/search")
+def api_web_search(request: WebSearchRequest):
+    """Execute live web search using privacy-preserving engine."""
+    from backend.tools import web_tools
+    return web_tools.search_web(query=request.query, max_results=request.max_results or 5)
+
+class SystemOpenLinkRequest(BaseModel):
+    url: str
+    inspect: Optional[bool] = False
+
+@app.post("/api/system/open-link")
+def api_system_open_link(request: SystemOpenLinkRequest):
+    """Launch any external URL or link directly in Google Chrome."""
+    from backend.tools.system_control import _launch_browser
+    success = _launch_browser(request.url, inspect=bool(request.inspect))
+    return {
+        "status": "success" if success else "error",
+        "url": request.url,
+        "browser": "Google Chrome"
+    }
 
 # ======================================================================
 # PHASE 9 & 10: DESKTOP PACKAGING, GLOBAL HOTKEY & AUTOSTART ENDPOINTS

@@ -38,7 +38,7 @@ def init_vault_db() -> None:
                 email TEXT DEFAULT '',
                 tech_stack TEXT DEFAULT 'Python, Next.js, React, TypeScript, FastAPI, AI/LLMs',
                 coding_preferences TEXT DEFAULT 'TypeScript strict, Tailwind CSS, Clean Modular Architecture, Functional components',
-                ai_tone TEXT DEFAULT 'Sharp, respectful, friendly Roman Urdu (Akmal bhai), concise and direct',
+                ai_tone TEXT DEFAULT 'Sharp, respectful, friendly Roman Urdu (Akmal Sir), concise and direct',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -49,7 +49,7 @@ def init_vault_db() -> None:
         if "coding_preferences" not in columns:
             cursor.execute("ALTER TABLE creator_profile ADD COLUMN coding_preferences TEXT DEFAULT 'TypeScript strict, Tailwind CSS, Clean Modular Architecture'")
         if "ai_tone" not in columns:
-            cursor.execute("ALTER TABLE creator_profile ADD COLUMN ai_tone TEXT DEFAULT 'Sharp, respectful, friendly Roman Urdu (Akmal bhai), concise'")
+            cursor.execute("ALTER TABLE creator_profile ADD COLUMN ai_tone TEXT DEFAULT 'Sharp, respectful, friendly Roman Urdu (Akmal Sir), concise'")
 
         # Ensure default profile row exists
         cursor.execute("SELECT id FROM creator_profile WHERE id = 1")
@@ -60,7 +60,7 @@ def init_vault_db() -> None:
                         'Creator and Lead Developer of JARVIS AI System.', 
                         'Python, Next.js, React, TypeScript, FastAPI, AI/LLMs',
                         'TypeScript strict, Tailwind CSS, Clean Modular Architecture',
-                        'Sharp, respectful, friendly Roman Urdu (Akmal bhai), concise')
+                        'Sharp, respectful, friendly Roman Urdu (Akmal Sir), concise')
             """)
 
         # 2. Creator Active Projects Table
@@ -655,5 +655,5 @@ def get_creator_prompt_summary() -> str:
 
         return " ".join([p for p in summary_parts if p])
     except Exception:
-        return "CREATOR IDENTITY: You are JARVIS, built exclusively for your creator M. Akmal (Akmal bhai)."
+        return "CREATOR IDENTITY: You are JARVIS, built exclusively for your creator M. Akmal (Akmal Sir)."
 

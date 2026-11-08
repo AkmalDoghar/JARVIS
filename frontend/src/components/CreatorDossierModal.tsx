@@ -5,8 +5,9 @@ import {
   User, ShieldCheck, RefreshCw, Code, X, ExternalLink,
   Globe, Share2, Mic, Terminal, Cpu, Radio,
   Fingerprint, Activity, CheckCircle2, Zap,
-  Check, Copy, Shield, Database, Compass, Trash2,
-  Lock, KeyRound, Eye, EyeOff, Camera
+  Check, Copy, Database, Compass, Trash2,
+  Lock, KeyRound, Eye, EyeOff, Camera,
+  Mail, Send, AtSign, Plus, Sparkles
 } from "lucide-react";
 
 function InstagramIcon({ size = 18, className = "" }: { size?: number; className?: string }) {
@@ -37,6 +38,16 @@ export interface SyncedRepo {
   html_url?: string;
 }
 
+export interface CreatorEmailAccount {
+  id: string;
+  label: string;
+  email: string;
+  provider: "gmail" | "outlook" | "yahoo" | "proton" | "custom" | string;
+  is_primary?: boolean;
+  inbox_url?: string;
+  notes?: string;
+}
+
 export interface CreatorDossierData {
   personal?: {
     name?: string;
@@ -47,6 +58,7 @@ export interface CreatorDossierData {
     email?: string;
     avatar_url?: string;
   };
+  emails?: CreatorEmailAccount[];
   social_profiles?: {
     github?: string;
     github_username?: string;
@@ -102,8 +114,274 @@ export function CreatorDossierModal({
   const [showPassword, setShowPassword] = useState(false);
 
   // Active Tab in Unlocked Mode
-  const [activeTab, setActiveTab] = useState<'overview' | 'repos' | 'edit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'emails' | 'repos' | 'edit'>('overview');
   
+  // Email Accounts State
+  const [emailsList, setEmailsList] = useState<CreatorEmailAccount[]>(() => dossier?.emails || []);
+  const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
+  const [emailForm, setEmailForm] = useState<{
+    id: string;
+    label: string;
+    email: string;
+    provider: string;
+    is_primary: boolean;
+    notes: string;
+    inbox_url?: string;
+  }>({
+    id: "email_1",
+    label: "Personal Gmail",
+    email: "",
+    provider: "gmail",
+    is_primary: true,
+    notes: ""
+  });
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [openingEmailId, setOpeningEmailId] = useState<string | null>(null);
+  const [slotDrafts, setSlotDrafts] = useState<Record<string, { email: string; provider: string }>>({});
+
+  const handleSaveEmailAccount = async (accountData: {
+    id: string;
+    label: string;
+    email: string;
+    provider?: string;
+    is_primary?: boolean;
+    notes?: string;
+  }) => {
+    if (!accountData.email || !accountData.email.trim()) {
+      showNotice("Please enter a valid email address.");
+      return;
+    }
+    setIsSavingEmail(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/emails/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(accountData),
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        showNotice(`Account "${accountData.label}" saved & attached!`);
+        setEditingEmailId(null);
+        await fetchEmails();
+      } else {
+        showNotice(data.detail || "Failed to save email account.");
+      }
+    } catch {
+      showNotice("Network error saving email account.");
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const fetchEmails = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/emails");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.emails && Array.isArray(data.emails)) {
+          setEmailsList(data.emails);
+        }
+      }
+    } catch {
+      // offline
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && isUnlocked) {
+      fetchEmails();
+    }
+  }, [isOpen, isUnlocked]);
+
+  const handleOpenEmail = async (identifier: string, action: "inbox" | "compose" = "inbox") => {
+    setOpeningEmailId(identifier);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/emails/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, action })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showNotice(data.message || `Opened ${identifier} in default browser.`);
+      } else {
+        if (data.url) {
+          openInChrome(data.url);
+          showNotice(`Opened inbox in Google Chrome!`);
+        } else {
+          showNotice(data.error || "Please configure this email address first.");
+        }
+      }
+    } catch {
+      showNotice("Failed to launch email portal.");
+    } finally {
+      setOpeningEmailId(null);
+    }
+  };
+
+  const openInChrome = async (rawUrl?: string) => {
+    if (!rawUrl) return;
+    const targetUrl = rawUrl.startsWith("http://") || rawUrl.startsWith("https://")
+      ? rawUrl
+      : `https://${rawUrl}`;
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/system/open-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: targetUrl })
+      });
+      if (res.ok) {
+        showNotice("Opened in Google Chrome!");
+        return;
+      }
+    } catch {
+      // offline fallback
+    }
+    window.open(targetUrl, "_blank");
+  };
+
+  const handleSaveEmail = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!emailForm.email.trim()) {
+      showNotice("Please enter a valid email address.");
+      return;
+    }
+    setIsSavingEmail(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/emails/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        showNotice(`Account "${emailForm.label}" saved successfully!`);
+        setEditingEmailId(null);
+        await fetchEmails();
+      } else {
+        showNotice(data.detail || "Failed to save email account.");
+      }
+    } catch {
+      showNotice("Network error saving email account.");
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleDeleteEmail = async (emailId: string, label: string) => {
+    if (!window.confirm(`Akmal Sir, kya aap waqai '${label}' account delete/clear karna chahte hain?`)) return;
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/emails/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: emailId })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        showNotice(data.message || `Account '${label}' cleared/detached!`);
+        await fetchEmails();
+      } else {
+        showNotice(data.message || "Failed to delete account.");
+      }
+    } catch {
+      showNotice("Failed to delete email account.");
+    }
+  };
+
+  const handleQuickAttach = async (slotId: string, defaultLabel: string, defaultProvider: string = "gmail") => {
+    const draft = slotDrafts[slotId];
+    const emailVal = draft?.email?.trim();
+    if (!emailVal || !emailVal.includes("@")) {
+      showNotice("Please enter a valid email address.");
+      return;
+    }
+    const detectedProvider = emailVal.endsWith("@outlook.com") || emailVal.endsWith("@hotmail.com") 
+      ? "outlook" 
+      : (draft?.provider || defaultProvider);
+
+    await handleSaveEmailAccount({
+      id: slotId,
+      label: defaultLabel,
+      email: emailVal,
+      provider: detectedProvider,
+      is_primary: slotId === "email_1",
+      notes: `Creator ${defaultLabel}`
+    });
+
+    setSlotDrafts(prev => {
+      const next = { ...prev };
+      delete next[slotId];
+      return next;
+    });
+  };
+
+  // Repository Add/Edit State
+  const [showRepoModal, setShowRepoModal] = useState(false);
+  const [repoForm, setRepoForm] = useState<{
+    name: string;
+    description: string;
+    language: string;
+    stars: number;
+    html_url: string;
+  }>({
+    name: "",
+    description: "",
+    language: "JavaScript",
+    stars: 0,
+    html_url: ""
+  });
+  const [isSavingRepo, setIsSavingRepo] = useState(false);
+
+  const handleSaveRepo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!repoForm.name.trim()) {
+      showNotice("Please enter a repository name.");
+      return;
+    }
+    setIsSavingRepo(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/repos/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(repoForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        showNotice(`Repository "${repoForm.name}" saved!`);
+        setShowRepoModal(false);
+        setRepoForm({ name: "", description: "", language: "JavaScript", stars: 0, html_url: "" });
+        await onSync(dossier?.social_profiles?.github_username || editGithub);
+      } else {
+        showNotice(data.detail || "Failed to save repository.");
+      }
+    } catch {
+      showNotice("Network error saving repository.");
+    } finally {
+      setIsSavingRepo(false);
+    }
+  };
+
+  const handleDeleteRepo = async (repoName: string) => {
+    if (!window.confirm(`Akmal Sir, kya aap waqai '${repoName}' repository delete karna chahte hain?`)) return;
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dossier/repos/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: repoName })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        showNotice(`Repository '${repoName}' deleted!`);
+        await onSync(dossier?.social_profiles?.github_username || editGithub);
+      } else {
+        showNotice("Failed to delete repository.");
+      }
+    } catch {
+      showNotice("Failed to delete repository.");
+    }
+  };
+
   // Edit Form States
   const [editName, setEditName] = useState(() => dossier?.personal?.name || "Muhammad Akmal");
   const [editTitle, setEditTitle] = useState(() => dossier?.personal?.title || "Full Stack Developer & AI Engineer");
@@ -184,7 +462,7 @@ export function CreatorDossierModal({
       if (res.ok && data.status === "success") {
         setIsUnlocked(true);
         setUnlockError(null);
-        showNotice("Identity verified! Welcome, Akmal bhai.");
+        showNotice("Identity verified! Welcome, Akmal Sir.");
       } else {
         setUnlockError(data.detail || "Access Denied: Incorrect Security PIN.");
       }
@@ -209,7 +487,7 @@ export function CreatorDossierModal({
     setEditTechStack(Array.isArray(dossier?.tech_stack) ? dossier.tech_stack.join(", ") : "");
   };
 
-  const handleTabSwitch = (tab: 'overview' | 'repos' | 'edit') => {
+  const handleTabSwitch = (tab: 'overview' | 'emails' | 'repos' | 'edit') => {
     if (tab === 'edit') {
       populateEditFields();
     }
@@ -250,7 +528,7 @@ export function CreatorDossierModal({
   };
 
   const handleResetVoice = async () => {
-    if (!window.confirm("Akmal bhai, kya aap waqai enrolled voiceprint delete karna chahte hain? Iske baad JARVIS voice command kisi b shakhs se accept karega jab tak aap dubara voice enroll na karein.")) {
+    if (!window.confirm("Akmal Sir, kya aap waqai enrolled voiceprint delete karna chahte hain? Iske baad JARVIS voice command kisi b shakhs se accept karega jab tak aap dubara voice enroll na karein.")) {
       return;
     }
     setIsResettingVoice(true);
@@ -281,7 +559,7 @@ export function CreatorDossierModal({
       await onSave({
         personal: {
           name: editName.trim(),
-          preferred_name: "Akmal bhai",
+          preferred_name: "Akmal Sir",
           title: editTitle.trim(),
           bio: editBio.trim(),
           location: editLocation.trim(),
@@ -486,6 +764,7 @@ export function CreatorDossierModal({
               <div className="flex items-center gap-1.5 sm:gap-2">
                 {[
                   { id: 'overview' as const, label: 'Neural Identity & Voiceprint', icon: <ShieldCheck size={14} /> },
+                  { id: 'emails' as const, label: `Email Accounts Matrix (${emailsList.filter(e => e.email).length}/4)`, icon: <Mail size={14} /> },
                   { id: 'repos' as const, label: `Repositories & Cyber Footprint (${publicReposCount})`, icon: <Code size={14} /> },
                   { id: 'edit' as const, label: 'Override & Edit Parameters', icon: <Terminal size={14} /> },
                 ].map((tab) => {
@@ -571,7 +850,7 @@ export function CreatorDossierModal({
                               {dossier?.personal?.name || "Muhammad Akmal"}
                             </h3>
                             <span className="text-[10px] bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 px-2 py-0.2 rounded-full font-mono font-bold">
-                              {dossier?.personal?.preferred_name || "Akmal bhai"}
+                              {dossier?.personal?.preferred_name || "Akmal Sir"}
                             </span>
                           </div>
                           
@@ -678,7 +957,7 @@ export function CreatorDossierModal({
                       <p className="text-[11px] text-slate-400 leading-relaxed">
                         {voiceStatus?.enrolled
                           ? "Acoustic 48-dimensional spectral vector active. Commands from unrecognized speakers will be rejected automatically."
-                          : "Record your vocal signature so JARVIS will recognize your unique voice and restrict commands to Akmal bhai only."}
+                          : "Record your vocal signature so JARVIS will recognize your unique voice and restrict commands to Akmal Sir only."}
                       </p>
 
                       {voiceStatus?.enrolled ? (
@@ -709,7 +988,7 @@ export function CreatorDossierModal({
                           className="w-full py-2 px-3 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 transition-all flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20 cursor-pointer disabled:opacity-50"
                         >
                           <Mic size={14} className={isEnrollingVoice ? "animate-pulse text-red-700" : ""} />
-                          <span>{isEnrollingVoice ? "Listening to your voice (4s)..." : "Enroll Akmal bhai's Voiceprint"}</span>
+                          <span>{isEnrollingVoice ? "Listening to your voice (4s)..." : "Enroll Akmal Sir's Voiceprint"}</span>
                         </button>
                       )}
                     </div>
@@ -718,6 +997,154 @@ export function CreatorDossierModal({
 
                   {/* RIGHT COLUMN: Connected Satellites, Arsenal & AI Directive (7 Cols) */}
                   <div className="lg:col-span-7 flex flex-col gap-4">
+
+                    {/* Creator Inboxes & Email Matrix (Phase 6 Integration) */}
+                    <div className="bg-gradient-to-b from-[#07132B] via-[#050D1E] to-[#030712] border border-cyan-500/40 rounded-2xl p-4 shadow-[0_0_25px_rgba(6,182,212,0.1)] flex flex-col gap-3">
+                      <div className="flex items-center justify-between border-b border-[#121F33] pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center">
+                            <Mail size={14} />
+                          </div>
+                          <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                            Creator Inboxes & Email Matrix
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleTabSwitch('emails')}
+                          className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Terminal size={11} />
+                          <span>Configure 4 Accounts</span>
+                        </button>
+                      </div>
+
+                      {/* 4 Email Slots List */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {emailsList.slice(0, 4).map((em, idx) => {
+                          const hasEmail = Boolean(em.email && em.email.trim());
+                          return (
+                            <div
+                              key={em.id || idx}
+                              className={`p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition-all ${
+                                em.is_primary
+                                  ? "bg-gradient-to-br from-[#091B33] to-[#040C1A] border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                                  : "bg-[#060F20] border-[#162744] hover:border-cyan-500/30"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-1.5">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${
+                                    em.provider === "outlook" 
+                                      ? "bg-blue-600/30 text-blue-300 border border-blue-400/40"
+                                      : "bg-red-500/20 text-red-300 border border-red-400/40"
+                                  }`}>
+                                    <AtSign size={13} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="text-xs font-bold text-white block truncate">
+                                      {em.label || `Account #${idx + 1}`}
+                                    </span>
+                                    <span className={`text-[10px] font-mono block truncate ${hasEmail ? "text-cyan-200 font-bold" : "text-slate-400"}`}>
+                                      {hasEmail ? em.email : "Not attached yet"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {em.is_primary && (
+                                    <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 uppercase">
+                                      PRIMARY
+                                    </span>
+                                  )}
+                                  <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${
+                                    hasEmail 
+                                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
+                                      : "bg-slate-800 text-slate-400 border-slate-700"
+                                  }`}>
+                                    {hasEmail ? "ATTACHED" : "VACANT"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Action Bar / Inline Attach Form */}
+                              {hasEmail ? (
+                                <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-800/80 text-[10px] font-mono">
+                                  <button
+                                    type="button"
+                                    disabled={openingEmailId === em.id}
+                                    onClick={() => handleOpenEmail(em.id, 'inbox')}
+                                    className="flex-1 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/40 text-cyan-200 font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                    title="Open Inbox in default browser"
+                                  >
+                                    <ExternalLink size={10} />
+                                    <span>{openingEmailId === em.id ? "Opening..." : "Open Inbox"}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEmail(em.id, 'compose')}
+                                    className="px-2 py-1 rounded-lg bg-[#0A1830] hover:bg-cyan-900/40 border border-slate-700 text-slate-300 hover:text-cyan-200 transition-all cursor-pointer"
+                                    title="Compose new draft"
+                                  >
+                                    <Send size={10} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(em.email, em.label)}
+                                    className="p-1 rounded-lg bg-[#0A1830] hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                                    title="Copy email address"
+                                  >
+                                    {copiedLink === em.label ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteEmail(em.id, em.label)}
+                                    className="p-1 rounded-lg bg-[#0A1830] hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 transition-all cursor-pointer"
+                                    title="Detach/Clear this email"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-800/80">
+                                  <input
+                                    type="email"
+                                    placeholder="Enter email to attach..."
+                                    value={slotDrafts[em.id]?.email ?? ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setSlotDrafts(prev => ({
+                                        ...prev,
+                                        [em.id]: {
+                                          provider: prev[em.id]?.provider || em.provider || "gmail",
+                                          email: val
+                                        }
+                                      }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleQuickAttach(em.id, em.label, em.provider);
+                                      }
+                                    }}
+                                    className="flex-1 min-w-0 bg-[#02050E] border border-cyan-500/40 focus:border-cyan-300 text-xs px-2.5 py-1 rounded-lg text-white font-mono placeholder:text-slate-500 focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={isSavingEmail}
+                                    onClick={() => handleQuickAttach(em.id, em.label, em.provider)}
+                                    className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-[10px] font-mono transition-all shrink-0 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    title="Attach and save email directly to dossier"
+                                  >
+                                    <Plus size={11} />
+                                    <span>Attach</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                     
                     {/* Connected Satellites (Social Portals) */}
                     <div className="bg-[#050C1C] border border-[#14233D] rounded-2xl p-4 shadow-md flex flex-col gap-3">
@@ -738,7 +1165,7 @@ export function CreatorDossierModal({
                           <div 
                             onClick={() => {
                               const url = dossier?.social_profiles?.github || (editGithub ? `https://github.com/${editGithub}` : "https://github.com");
-                              window.open(url, "_blank");
+                              openInChrome(url);
                             }}
                             className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
                           >
@@ -769,7 +1196,7 @@ export function CreatorDossierModal({
                           <div 
                             onClick={() => {
                               const url = dossier?.social_profiles?.linkedin || editLinkedin;
-                              if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank");
+                              if (url) openInChrome(url);
                               else handleTabSwitch('edit');
                             }}
                             className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
@@ -801,7 +1228,7 @@ export function CreatorDossierModal({
                           <div 
                             onClick={() => {
                               const url = dossier?.social_profiles?.portfolio || editPortfolio;
-                              if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank");
+                              if (url) openInChrome(url);
                               else handleTabSwitch('edit');
                             }}
                             className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
@@ -833,7 +1260,7 @@ export function CreatorDossierModal({
                           <div 
                             onClick={() => {
                               const url = dossier?.social_profiles?.instagram || editInstagram;
-                              if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank");
+                              if (url) openInChrome(url);
                               else handleTabSwitch('edit');
                             }}
                             className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
@@ -888,7 +1315,7 @@ export function CreatorDossierModal({
                     </div>
 
                     {/* AI Consciousness Directive & Rules */}
-                    <div className="bg-gradient-to-r from-[#061126] via-[#050D1E] to-[#061126] border border-cyan-500/30 rounded-2xl p-4 shadow-md flex flex-col gap-2.5">
+                    {/* <div className="bg-gradient-to-r from-[#061126] via-[#050D1E] to-[#061126] border border-cyan-500/30 rounded-2xl p-4 shadow-md flex flex-col gap-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-cyan-300 font-mono uppercase tracking-wider flex items-center gap-1.5">
                           <Shield size={14} className="text-cyan-400" />
@@ -902,7 +1329,7 @@ export function CreatorDossierModal({
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs pt-1">
                         <div className="bg-black/30 border border-slate-800/80 p-2.5 rounded-xl">
                           <span className="text-[10px] text-slate-500 uppercase font-mono block">Honorific</span>
-                          <span className="font-bold text-white font-mono">{dossier?.ai_interaction_rules?.honorific || "Akmal bhai"}</span>
+                          <span className="font-bold text-white font-mono">{dossier?.ai_interaction_rules?.honorific || "Akmal Sir"}</span>
                         </div>
                         <div className="bg-black/30 border border-slate-800/80 p-2.5 rounded-xl">
                           <span className="text-[10px] text-slate-500 uppercase font-mono block">Vocal Synthesis</span>
@@ -917,8 +1344,525 @@ export function CreatorDossierModal({
                       <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
                         JARVIS is permanently bonded to recognize Muhammad Akmal as its sovereign creator. All responses, tools, and system controls adhere directly to your engineering preferences without requesting security PINs on local desktop.
                       </p>
+                    </div> */}
+
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: CREATOR COMMUNICATIONS & EMAIL MATRIX */}
+              {activeTab === 'emails' && (
+                <div className="flex flex-col gap-5 animate-in fade-in duration-200">
+                  {/* Top Status & Controls Banner */}
+                  <div className="bg-gradient-to-r from-[#06142A] via-[#081B38] to-[#040C1A] border border-cyan-500/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] shrink-0">
+                        <Mail size={22} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm sm:text-base font-bold text-white tracking-wider font-hud">
+                            CREATOR COMMUNICATIONS MATRIX
+                          </h4>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold uppercase">
+                            4-INBOX SYNC
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 font-mono mt-0.5">
+                          Configure all 4 personal and professional email accounts for automated 1-click & voice launching.
+                        </p>
+                      </div>
                     </div>
 
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEmail("primary")}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-500/25 hover:bg-cyan-500/40 border border-cyan-400/60 text-cyan-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-cyan-500/10 hover:shadow-cyan-500/25"
+                        title="Launch primary email in default browser"
+                      >
+                        <ExternalLink size={13} />
+                        <span>Launch Primary Inbox</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PROMINENT DIRECT EMAIL CONFIGURATION SUITE */}
+                  <div className="bg-[#050E20] border-2 border-cyan-500/50 rounded-2xl p-5 shadow-[0_0_35px_rgba(6,182,212,0.2)] flex flex-col gap-4">
+                    <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold">
+                          <Plus size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-white font-hud tracking-wide">
+                            {editingEmailId ? `UPDATE EMAIL: ${emailForm.label}` : "DIRECT EMAIL CONFIGURATION SUITE"}
+                          </h4>
+                          <span className="text-[11px] text-cyan-400 font-mono">
+                            Enter any of your 4 emails here or select a slot below to edit and save instantly
+                          </span>
+                        </div>
+                      </div>
+                      {editingEmailId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingEmailId(null);
+                            setEmailForm({ id: "email_1", label: "Personal Gmail", email: "", provider: "gmail", is_primary: true, notes: "" });
+                          }}
+                          className="text-xs text-slate-400 hover:text-white px-3 py-1 rounded-lg bg-slate-800 cursor-pointer"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
+
+                    <form onSubmit={handleSaveEmail} className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs font-mono">
+                      {/* Target Slot Selector */}
+                      <div className="sm:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] text-slate-400 font-bold uppercase">Target Account Slot</label>
+                        <select
+                          value={emailForm.id}
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            const existing = emailsList.find(x => x.id === selectedId);
+                            if (existing) {
+                              setEmailForm({
+                                id: existing.id,
+                                label: existing.label,
+                                email: existing.email || "",
+                                provider: existing.provider || "gmail",
+                                is_primary: Boolean(existing.is_primary),
+                                notes: existing.notes || "",
+                                inbox_url: existing.inbox_url || ""
+                              });
+                              setEditingEmailId(existing.id);
+                            } else {
+                              setEmailForm({
+                                id: `email_${emailsList.length + 1}`,
+                                label: "Custom Email",
+                                email: "",
+                                provider: "gmail",
+                                is_primary: false,
+                                notes: ""
+                              });
+                              setEditingEmailId(null);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-[#02050B] border border-cyan-500/40 text-cyan-200 font-bold focus:outline-none focus:border-cyan-300 cursor-pointer"
+                        >
+                          {emailsList.map((em, i) => (
+                            <option key={em.id || i} value={em.id}>
+                              Slot {i + 1}: {em.label} {em.is_primary ? "(Primary)" : ""}
+                            </option>
+                          ))}
+                          <option value="new">+ Add 5th / Custom Account</option>
+                        </select>
+                      </div>
+
+                      {/* Account Label */}
+                      <div className="sm:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] text-slate-400 font-bold uppercase">Account Label</label>
+                        <input
+                          type="text"
+                          value={emailForm.label}
+                          onChange={(e) => setEmailForm({ ...emailForm, label: e.target.value })}
+                          placeholder="e.g. Work & Business"
+                          className="px-3 py-2 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white font-bold focus:outline-none focus:border-cyan-300"
+                          required
+                        />
+                      </div>
+
+                      {/* Email Address */}
+                      <div className="sm:col-span-4 flex flex-col gap-1.5">
+                        <label className="text-[10px] text-cyan-300 font-bold uppercase flex items-center gap-1">
+                          <AtSign size={10} /> Email Address (Required)
+                        </label>
+                        <input
+                          type="email"
+                          value={emailForm.email}
+                          onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                          placeholder="akmal@example.com"
+                          className="px-3 py-2 rounded-xl bg-[#02050B] border border-cyan-500/60 text-cyan-100 font-bold focus:outline-none focus:border-cyan-300"
+                          required
+                        />
+                      </div>
+
+                      {/* Provider */}
+                      <div className="sm:col-span-2 flex flex-col gap-1.5">
+                        <label className="text-[10px] text-slate-400 font-bold uppercase">Provider</label>
+                        <select
+                          value={emailForm.provider}
+                          onChange={(e) => setEmailForm({ ...emailForm, provider: e.target.value })}
+                          className="px-3 py-2 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300 cursor-pointer"
+                        >
+                          <option value="gmail">Google Gmail</option>
+                          <option value="outlook">Outlook / Hotmail</option>
+                          <option value="yahoo">Yahoo Mail</option>
+                          <option value="proton">ProtonMail</option>
+                          <option value="custom">Webmail / cPanel</option>
+                        </select>
+                      </div>
+
+                      {/* Notes / Purpose */}
+                      <div className="sm:col-span-8 flex flex-col gap-1.5">
+                        <label className="text-[10px] text-slate-400 font-bold uppercase">Purpose / Voice AI Trigger Context</label>
+                        <input
+                          type="text"
+                          value={emailForm.notes}
+                          onChange={(e) => setEmailForm({ ...emailForm, notes: e.target.value })}
+                          placeholder="e.g. Work projects, client communication & proposals"
+                          className="px-3 py-2 rounded-xl bg-[#02050B] border border-cyan-500/30 text-white focus:outline-none focus:border-cyan-300"
+                        />
+                      </div>
+
+                      {/* Primary Checkbox & Submit */}
+                      <div className="sm:col-span-4 flex items-center justify-between gap-3 pt-4 sm:pt-6">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-300 select-none">
+                          <input
+                            type="checkbox"
+                            checked={emailForm.is_primary}
+                            onChange={(e) => setEmailForm({ ...emailForm, is_primary: e.target.checked })}
+                            className="w-4 h-4 rounded border-cyan-500 text-cyan-500 cursor-pointer"
+                          />
+                          <span className="font-bold text-cyan-300 text-[11px]">Primary</span>
+                        </label>
+
+                        <button
+                          type="submit"
+                          disabled={isSavingEmail}
+                          className="flex-1 py-2 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-cyan-500/25 disabled:opacity-50"
+                        >
+                          {isSavingEmail ? "Saving..." : "💾 Save Email"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* 4 Email Slots Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {emailsList.slice(0, 4).map((em, idx) => {
+                      const isEditing = editingEmailId === em.id;
+                      const hasEmail = Boolean(em.email && em.email.trim());
+
+                      if (isEditing) {
+                        return (
+                          <form
+                            key={em.id || idx}
+                            onSubmit={handleSaveEmail}
+                            className="bg-gradient-to-b from-[#091C38] to-[#040C1A] border-2 border-cyan-400 rounded-2xl p-4 flex flex-col gap-3 shadow-[0_0_30px_rgba(6,182,212,0.25)] animate-in zoom-in-95 duration-150"
+                          >
+                            <div className="flex items-center justify-between border-b border-cyan-500/30 pb-2">
+                              <span className="text-xs font-mono font-bold text-cyan-300 flex items-center gap-1.5">
+                                <Terminal size={12} />
+                                EDIT SLOT #{idx + 1}: {em.label}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingEmailId(null)}
+                                className="text-slate-400 hover:text-white text-xs font-mono"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-slate-400 font-semibold">Account Label</label>
+                                <input
+                                  type="text"
+                                  value={emailForm.label}
+                                  onChange={(e) => setEmailForm({ ...emailForm, label: e.target.value })}
+                                  placeholder="e.g. Work & Business"
+                                  className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300"
+                                  required
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-slate-400 font-semibold">Provider Platform</label>
+                                <select
+                                  value={emailForm.provider}
+                                  onChange={(e) => setEmailForm({ ...emailForm, provider: e.target.value })}
+                                  className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300 cursor-pointer"
+                                >
+                                  <option value="gmail">Google Gmail</option>
+                                  <option value="outlook">Microsoft Outlook / Hotmail</option>
+                                  <option value="yahoo">Yahoo Mail</option>
+                                  <option value="proton">ProtonMail</option>
+                                  <option value="custom">Custom Webmail / cPanel</option>
+                                </select>
+                              </div>
+
+                              <div className="flex flex-col gap-1 sm:col-span-2">
+                                <label className="text-[10px] text-cyan-300 font-semibold flex items-center gap-1">
+                                  <AtSign size={10} /> Email Address (Direct Account)
+                                </label>
+                                <input
+                                  type="email"
+                                  value={emailForm.email}
+                                  onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                                  placeholder="akmal@example.com"
+                                  className="px-3 py-2 rounded-xl bg-[#02050B] border border-cyan-500/50 text-cyan-200 font-bold focus:outline-none focus:border-cyan-300"
+                                  required
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1 sm:col-span-2">
+                                <label className="text-[10px] text-slate-400 font-semibold">Notes / Purpose (Voice AI Trigger Context)</label>
+                                <input
+                                  type="text"
+                                  value={emailForm.notes}
+                                  onChange={(e) => setEmailForm({ ...emailForm, notes: e.target.value })}
+                                  placeholder="e.g. Work projects, client communication & proposals"
+                                  className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/30 text-white focus:outline-none focus:border-cyan-300"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 sm:col-span-2 pt-1">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={emailForm.is_primary}
+                                    onChange={(e) => setEmailForm({ ...emailForm, is_primary: e.target.checked })}
+                                    className="w-4 h-4 rounded border-cyan-500 text-cyan-500 cursor-pointer"
+                                  />
+                                  <span className="font-bold text-cyan-300">Set as Primary Email Account</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-cyan-500/20">
+                              <button
+                                type="button"
+                                onClick={() => setEditingEmailId(null)}
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isSavingEmail}
+                                className="px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-bold transition-all cursor-pointer shadow-md disabled:opacity-50"
+                              >
+                                {isSavingEmail ? "Saving..." : "Save Account"}
+                              </button>
+                            </div>
+                          </form>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={em.id || idx}
+                          className={`rounded-2xl p-4 sm:p-5 border flex flex-col justify-between gap-4 transition-all relative overflow-hidden group ${
+                            em.is_primary
+                              ? "bg-gradient-to-b from-[#091D3B] via-[#051124] to-[#030914] border-cyan-500/60 shadow-[0_0_25px_rgba(6,182,212,0.18)]"
+                              : "bg-gradient-to-b from-[#071224] to-[#040914] border-[#152744] hover:border-cyan-500/40 shadow-sm"
+                          }`}
+                        >
+                          {/* Corner Accent */}
+                          <div className="absolute top-2 right-2 text-[9px] font-mono text-cyan-400/40 select-none pointer-events-none">
+                            SLOT 0{idx + 1}
+                          </div>
+
+                          <div className="flex flex-col gap-2.5">
+                            {/* Card Header */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+                                  em.provider === "outlook"
+                                    ? "bg-blue-600/30 text-blue-300 border-blue-400/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                                    : "bg-red-500/25 text-red-300 border-red-400/50 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                                }`}>
+                                  <AtSign size={18} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="text-sm font-bold text-white tracking-wide">
+                                      {em.label || `Account #${idx + 1}`}
+                                    </h5>
+                                    {em.is_primary && (
+                                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-400/60 uppercase shadow-sm">
+                                        PRIMARY
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-cyan-400 font-mono uppercase">
+                                    {em.provider || "gmail"} • Webmail Link Active
+                                  </span>
+                                </div>
+                              </div>
+
+                              <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-md border uppercase ${
+                                hasEmail 
+                                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                                  : "bg-slate-800 text-slate-400 border-slate-700"
+                              }`}>
+                                {hasEmail ? "🟢 ATTACHED & SYNCED" : "⚪ NOT ATTACHED"}
+                              </span>
+                            </div>
+
+                            {/* Email Display or Direct Attach Box */}
+                            {hasEmail ? (
+                              <div className="p-3 rounded-xl bg-[#02050D] border border-cyan-500/20 flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <span className="text-[10px] text-slate-500 font-mono block">Registered Address</span>
+                                  <span className="text-xs sm:text-sm font-bold font-mono text-cyan-200 truncate block">
+                                    {em.email}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(em.email, em.label)}
+                                  className="p-1.5 rounded-lg bg-[#07132B] hover:bg-cyan-900/50 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                  title="Copy Email"
+                                >
+                                  {copiedLink === em.label ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="p-3.5 rounded-xl bg-[#02050D] border border-cyan-500/30 flex flex-col gap-2 shadow-inner">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-mono font-bold text-cyan-300 uppercase flex items-center gap-1">
+                                    <Sparkles size={11} /> Enter Email to Attach
+                                  </span>
+                                  <span className="text-[9px] text-slate-500 font-mono">Press Enter or click Save</span>
+                                </div>
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                  <input
+                                    type="email"
+                                    placeholder={`e.g. akmal.${(em.label || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'work'}@gmail.com`}
+                                    value={slotDrafts[em.id]?.email ?? ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setSlotDrafts(prev => ({
+                                        ...prev,
+                                        [em.id]: {
+                                          provider: prev[em.id]?.provider || em.provider || "gmail",
+                                          email: val
+                                        }
+                                      }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleQuickAttach(em.id, em.label, em.provider);
+                                      }
+                                    }}
+                                    className="flex-1 bg-[#061022] border border-cyan-500/50 focus:border-cyan-300 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={isSavingEmail}
+                                    onClick={() => handleQuickAttach(em.id, em.label, em.provider)}
+                                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 shrink-0 shadow-md"
+                                  >
+                                    <Plus size={13} />
+                                    <span>Attach & Save</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Purpose / Notes */}
+                            <p className="text-[11px] text-slate-400 leading-relaxed font-mono">
+                              {em.notes || "Personal and professional correspondence for creator."}
+                            </p>
+                          </div>
+
+                          {/* Action Toolbar */}
+                          <div className="flex items-center gap-2 pt-3 border-t border-[#13223A] text-xs font-mono">
+                            <button
+                              type="button"
+                              disabled={!hasEmail || openingEmailId === em.id}
+                              onClick={() => handleOpenEmail(em.id, "inbox")}
+                              className="flex-1 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 disabled:opacity-30 border border-cyan-400/50 text-cyan-200 font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:cursor-not-allowed"
+                              title="Launch this inbox in default browser"
+                            >
+                              <ExternalLink size={12} />
+                              <span>{openingEmailId === em.id ? "Launching..." : "Open Inbox"}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!hasEmail}
+                              onClick={() => handleOpenEmail(em.id, "compose")}
+                              className="px-3 py-2 rounded-xl bg-[#08152B] hover:bg-cyan-900/40 disabled:opacity-30 border border-slate-700 text-slate-300 hover:text-cyan-200 font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:cursor-not-allowed"
+                              title="Compose new draft in this account"
+                            >
+                              <Send size={12} />
+                              <span>Draft</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEmailForm({
+                                  id: em.id,
+                                  label: em.label || `Account #${idx + 1}`,
+                                  email: em.email || "",
+                                  provider: em.provider || "gmail",
+                                  is_primary: Boolean(em.is_primary),
+                                  notes: em.notes || "",
+                                  inbox_url: em.inbox_url || "",
+                                });
+                                setEditingEmailId(em.id);
+                              }}
+                              className="px-3 py-2 rounded-xl bg-[#08152B] hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
+                              title="Edit account configuration"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEmail(em.id, em.label)}
+                              className="p-2 rounded-xl bg-[#08152B] hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 transition-all cursor-pointer"
+                              title="Detach or clear this account"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Natural Language Voice Integration Directive Card */}
+                  <div className="bg-[#040B18] border border-cyan-500/30 rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-md">
+                    <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                        <Sparkles size={14} className="text-cyan-400" />
+                        JARVIS Voice AI & Natural Intent Protocols
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                        ACTIVE IN BRAIN
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                      Akmal Sir, aap chat ya voice mein jo bhi bolenge, JARVIS foran us account ko recognize karke seedha browser mein launch karega:
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono">
+                      <div className="p-3 rounded-xl bg-[#061024] border border-cyan-500/25 flex flex-col gap-1">
+                        <span className="text-cyan-300 font-bold">🎤 &ldquo;Open my email&rdquo;</span>
+                        <span className="text-[10px] text-slate-400">Primary Gmail inbox open hogi.</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-[#061024] border border-cyan-500/25 flex flex-col gap-1">
+                        <span className="text-cyan-300 font-bold">🎤 &ldquo;Work email check karo&rdquo;</span>
+                        <span className="text-[10px] text-slate-400">Work & Business inbox open hogi.</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-[#061024] border border-cyan-500/25 flex flex-col gap-1">
+                        <span className="text-cyan-300 font-bold">🎤 &ldquo;Developer email kholo&rdquo;</span>
+                        <span className="text-[10px] text-slate-400">Developer & GitHub account open hoga.</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-[#061024] border border-cyan-500/25 flex flex-col gap-1">
+                        <span className="text-cyan-300 font-bold">🎤 &ldquo;Check official email&rdquo;</span>
+                        <span className="text-[10px] text-slate-400">Official / Secondary inbox launch hogi.</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -943,15 +1887,133 @@ export function CreatorDossierModal({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => onSync(dossier?.social_profiles?.github_username || editGithub)}
-                      disabled={isSyncing}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 text-cyan-200 transition-all flex items-center gap-2 shrink-0 cursor-pointer shadow-md shadow-cyan-500/10"
-                    >
-                      <RefreshCw size={13} className={isSyncing ? "animate-spin text-cyan-300" : ""} />
-                      <span>{isSyncing ? "Scanning Repositories..." : "Scan & Refresh Repos"}</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRepoForm({
+                            name: "",
+                            description: "",
+                            language: "JavaScript",
+                            stars: 0,
+                            html_url: "",
+                          });
+                          setShowRepoModal(!showRepoModal);
+                        }}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/50 text-cyan-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        title="Add a new repository manually"
+                      >
+                        <Plus size={13} />
+                        <span>Add Repository</span>
+                      </button>
+
+                      <button
+                        onClick={() => onSync(dossier?.social_profiles?.github_username || editGithub)}
+                        disabled={isSyncing}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 text-cyan-200 transition-all flex items-center gap-2 shrink-0 cursor-pointer shadow-md shadow-cyan-500/10"
+                      >
+                        <RefreshCw size={13} className={isSyncing ? "animate-spin text-cyan-300" : ""} />
+                        <span>{isSyncing ? "Scanning Repositories..." : "Scan & Refresh Repos"}</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Add / Edit Repository Form Drawer */}
+                  {showRepoModal && (
+                    <form
+                      onSubmit={handleSaveRepo}
+                      className="bg-gradient-to-b from-[#081B38] to-[#040D1E] border-2 border-cyan-400/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-[0_0_35px_rgba(6,182,212,0.25)] animate-in zoom-in-95 duration-150"
+                    >
+                      <div className="flex items-center justify-between border-b border-cyan-500/30 pb-2">
+                        <span className="text-xs font-mono font-bold text-white flex items-center gap-2">
+                          <Code size={14} className="text-cyan-400" />
+                          ADD / EDIT REPOSITORY CONFIGURATION
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowRepoModal(false)}
+                          className="text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label className="text-[10px] text-slate-400 font-bold">Repository Name *</label>
+                          <input
+                            type="text"
+                            value={repoForm.name}
+                            onChange={(e) => setRepoForm({ ...repoForm, name: e.target.value })}
+                            placeholder="e.g. chatify"
+                            className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300 font-bold"
+                            required
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-slate-400 font-bold">Coding Language</label>
+                          <input
+                            type="text"
+                            value={repoForm.language}
+                            onChange={(e) => setRepoForm({ ...repoForm, language: e.target.value })}
+                            placeholder="e.g. TypeScript, Python"
+                            className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-slate-400 font-bold">Star Count</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={repoForm.stars}
+                            onChange={(e) => setRepoForm({ ...repoForm, stars: parseInt(e.target.value) || 0 })}
+                            className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1 sm:col-span-2 md:col-span-3">
+                          <label className="text-[10px] text-slate-400 font-bold">Project Description</label>
+                          <input
+                            type="text"
+                            value={repoForm.description}
+                            onChange={(e) => setRepoForm({ ...repoForm, description: e.target.value })}
+                            placeholder="Short description of this project..."
+                            className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1 sm:col-span-2 md:col-span-1">
+                          <label className="text-[10px] text-slate-400 font-bold">GitHub Source Link</label>
+                          <input
+                            type="url"
+                            value={repoForm.html_url}
+                            onChange={(e) => setRepoForm({ ...repoForm, html_url: e.target.value })}
+                            placeholder="https://github.com/..."
+                            className="px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/40 text-white focus:outline-none focus:border-cyan-300"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-cyan-500/20">
+                        <button
+                          type="button"
+                          onClick={() => setShowRepoModal(false)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSavingRepo}
+                          className="px-5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono transition-all cursor-pointer shadow-md disabled:opacity-50"
+                        >
+                          {isSavingRepo ? "Saving..." : "💾 Save Repository"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
 
                   {/* Repos Grid */}
                   {currentRepos.length > 0 ? (
@@ -959,8 +2021,7 @@ export function CreatorDossierModal({
                       {currentRepos.map((repo, idx) => (
                         <div
                           key={idx}
-                          onClick={() => repo.html_url && window.open(repo.html_url, "_blank")}
-                          className="bg-gradient-to-b from-[#071022] to-[#050A16] border border-[#14233D] hover:border-cyan-400/60 p-4 rounded-2xl flex flex-col justify-between gap-3 group cursor-pointer transition-all hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:-translate-y-0.5"
+                          className="bg-gradient-to-b from-[#071022] to-[#050A16] border border-[#14233D] hover:border-cyan-400/60 p-4 rounded-2xl flex flex-col justify-between gap-3 group transition-all hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:-translate-y-0.5"
                         >
                           <div className="flex flex-col gap-1.5">
                             <div className="flex items-start justify-between gap-2">
@@ -982,9 +2043,46 @@ export function CreatorDossierModal({
                               ⭐ <span className="font-bold">{repo.stars}</span> stars
                             </span>
 
-                            <span className="text-cyan-400 group-hover:text-cyan-300 flex items-center gap-1 font-semibold text-[11px]">
-                              Launch Portal <ExternalLink size={12} />
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRepoForm({
+                                    name: repo.name,
+                                    description: repo.description || "",
+                                    language: repo.language || "Code",
+                                    stars: repo.stars || 0,
+                                    html_url: repo.html_url || "",
+                                  });
+                                  setShowRepoModal(true);
+                                }}
+                                className="px-2 py-1 rounded bg-[#07142A] hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer text-[10px]"
+                                title="Edit repository"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRepo(repo.name)}
+                                className="p-1 rounded bg-[#07142A] hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                                title="Delete repository"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+
+                              {repo.html_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => openInChrome(repo.html_url)}
+                                  className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold text-[11px] cursor-pointer"
+                                  title="Open in Google Chrome"
+                                >
+                                  <span>Portal</span>
+                                  <ExternalLink size={12} />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}

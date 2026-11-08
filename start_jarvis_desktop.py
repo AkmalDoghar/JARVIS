@@ -41,7 +41,7 @@ def start_backend():
     if not os.path.exists(python_exe):
         python_exe = sys.executable
 
-    cmd = [python_exe, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"]
+    cmd = [python_exe, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"]
     print("[Launcher] Starting FastAPI backend on http://127.0.0.1:8000 ...")
     BACKEND_PROCESS = subprocess.Popen(
         cmd,

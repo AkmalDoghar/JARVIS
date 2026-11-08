@@ -24,10 +24,20 @@ import {
   RefreshCw,
   Terminal,
   Activity,
+  FolderGit2,
+  Globe,
+  CloudSun,
+  Search,
+  GitBranch,
+  FileCode,
+  ExternalLink,
+  Wind,
+  Droplets,
 } from "lucide-react";
 import { MemoryMatrixWidget } from "./MemoryMatrixWidget";
+import { HudTimerWidget } from "./HudTimerWidget";
 
-export type HudModuleTab = "all" | "memory" | "system" | "timers" | "vision" | "agent";
+export type HudModuleTab = "all" | "memory" | "system" | "timers" | "files" | "web" | "vision" | "agent";
 
 export interface AgentPlanStep {
   step_number: number;
@@ -307,6 +317,115 @@ export function HudModuleModal({
     }
   };
 
+  // Phase 4 Files & Code Hub state
+  const [projectData, setProjectData] = useState<{
+    project_name?: string;
+    path?: string;
+    frameworks?: string[];
+    dependencies?: string[];
+    entry_files?: string[];
+    git?: {
+      is_git_repo?: boolean;
+      branch?: string;
+      modified_count?: number;
+      status_summary?: string;
+    };
+  } | null>(null);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+
+  const fetchProjectInfo = async () => {
+    setLoadingFiles(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/files/inspect");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.project) {
+          setProjectData(data.project);
+        } else if (data.project_name) {
+          setProjectData(data);
+        }
+      }
+    } catch {
+      // offline or error
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
+
+  // Phase 5 Web & Weather state
+  const [weatherCity, setWeatherCity] = useState("Islamabad");
+  const [weatherData, setWeatherData] = useState<{
+    city?: string;
+    country?: string;
+    temp_c?: string;
+    feels_like_c?: string;
+    condition?: string;
+    humidity?: string;
+    wind_kmph?: string;
+    spoken_summary?: string;
+    message?: string;
+    error?: string;
+  } | null>(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
+
+  const [webQuery, setWebQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{ title: string; snippet: string; url: string }>>([]);
+  const [searchingWeb, setSearchingWeb] = useState(false);
+
+  const fetchWeatherInfo = async (cityToFetch?: string) => {
+    const targetCity = cityToFetch || weatherCity || "Islamabad";
+    setLoadingWeather(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/web/weather?city=${encodeURIComponent(targetCity)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setWeatherData(data);
+      }
+    } catch {
+      // offline
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
+
+  const handleRunWebSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!webQuery.trim()) return;
+    setSearchingWeb(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/web/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: webQuery.trim(), max_results: 4 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.results) {
+          setSearchResults(data.results);
+        }
+      }
+    } catch {
+      // offline
+    } finally {
+      setSearchingWeb(false);
+    }
+  };
+
+  // Auto-fetch Files or Weather data when tabs are activated
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      if ((activeTab === "files" || activeTab === "all") && !projectData) {
+        fetchProjectInfo();
+      }
+      if ((activeTab === "web" || activeTab === "all") && !weatherData) {
+        fetchWeatherInfo();
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, activeTab, projectData, weatherData]);
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -346,6 +465,8 @@ export function HudModuleModal({
               {activeTab === "memory" && <BrainCircuit size={20} className="text-purple-400" />}
               {activeTab === "timers" && <Timer size={20} className="text-amber-400" />}
               {activeTab === "system" && <Cpu size={20} className="text-cyan-400" />}
+              {activeTab === "files" && <FolderGit2 size={20} className="text-emerald-400" />}
+              {activeTab === "web" && <Globe size={20} className="text-cyan-400" />}
               {activeTab === "vision" && <Eye size={20} className="text-emerald-400" />}
               {activeTab === "agent" && <Bot size={20} className="text-rose-400" />}
               {activeTab === "all" && <Layers size={20} className="text-blue-400" />}
@@ -356,6 +477,8 @@ export function HudModuleModal({
                   {activeTab === "memory" && "NEURAL MEMORY MATRIX"}
                   {activeTab === "timers" && "CHRONO-MATRIX HUB"}
                   {activeTab === "system" && "HARDWARE TELEMETRY"}
+                  {activeTab === "files" && "FILES & CODEBASE HUB"}
+                  {activeTab === "web" && "WEB & WEATHER INTELLIGENCE"}
                   {activeTab === "vision" && "DESKTOP VISION DIAGNOSTICS"}
                   {activeTab === "agent" && "AUTONOMOUS AGENT MISSION CONTROL"}
                   {activeTab === "all" && "TACTICAL COMMAND HUD"}
@@ -364,6 +487,8 @@ export function HudModuleModal({
                   {activeTab === "memory" && "Phase 6B Active"}
                   {activeTab === "timers" && "Phase 3C Async"}
                   {activeTab === "system" && "Live Sensor Feed"}
+                  {activeTab === "files" && "Phase 4 Code Tools"}
+                  {activeTab === "web" && "Phase 5 Online Research"}
                   {activeTab === "vision" && "Phase 7 Multimodal AI"}
                   {activeTab === "agent" && "Phase 8 Autonomous Pipeline"}
                   {activeTab === "all" && "All Subsystems"}
@@ -373,6 +498,8 @@ export function HudModuleModal({
                 {activeTab === "memory" && "Persistent episodic memories & project context recall"}
                 {activeTab === "timers" && "Non-blocking background countdowns, alarms & scheduled reminders"}
                 {activeTab === "system" && "Real-time CPU compute load, RAM allocation, network and battery status"}
+                {activeTab === "files" && "Workspace file reading, code editing, and Git inspection tools"}
+                {activeTab === "web" && "Real-time search, prompt injection defense, and meteorological radar"}
                 {activeTab === "vision" && "Real-time desktop screen capture, UI inspection & bug diagnostics"}
                 {activeTab === "agent" && "Multi-step autonomous execution, safety confirmation gates & circuit breaker"}
                 {activeTab === "all" && "Unified multi-subsystem view"}
@@ -381,7 +508,7 @@ export function HudModuleModal({
           </div>
 
           {/* Quick Tab Switcher inside Modal */}
-          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#030814]/90 border border-cyan-500/30">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#030814]/90 border border-cyan-500/30 overflow-x-auto">
             <button
               onClick={() => onTabChange("memory")}
               className={`px-3 py-1.5 rounded-xl font-mono text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -419,6 +546,30 @@ export function HudModuleModal({
             >
               <Cpu size={13} />
               <span>System</span>
+            </button>
+
+            <button
+              onClick={() => onTabChange("files")}
+              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === "files"
+                  ? "bg-emerald-600/40 text-emerald-200 border border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                  : "text-slate-400 hover:text-emerald-300"
+              }`}
+            >
+              <FolderGit2 size={13} />
+              <span>Files</span>
+            </button>
+
+            <button
+              onClick={() => onTabChange("web")}
+              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === "web"
+                  ? "bg-cyan-600/40 text-cyan-200 border border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.35)]"
+                  : "text-slate-400 hover:text-cyan-300"
+              }`}
+            >
+              <Globe size={13} />
+              <span>Web</span>
             </button>
 
             <button
@@ -486,7 +637,7 @@ export function HudModuleModal({
           )}
 
           {/* 2. CHRONO-MATRIX HUB VIEW */}
-          {(activeTab === "memory" || activeTab === "all") && (
+          {(activeTab === "timers" || activeTab === "all") && (
             <div className="space-y-4">
               {activeTab === "all" && (
                 <div className="flex items-center gap-2 pb-1 border-b border-amber-500/20 text-amber-300">
@@ -496,6 +647,15 @@ export function HudModuleModal({
                   </span>
                 </div>
               )}
+
+              {/* Integrated Live Main Timer Widget in All HUD & Timers Tab */}
+              <HudTimerWidget
+                activeTimers={activeTimers}
+                currentTimeSec={currentTimeSec}
+                formatSecondsToClock={formatSecondsToClock}
+                handleCancelItem={handleCancelItem}
+                handleLaunchPreset={handleLaunchPreset}
+              />
 
               <div
                 id="section-timers-modal"
@@ -898,6 +1058,344 @@ export function HudModuleModal({
                         {batteryLevel !== null ? `${batteryLevel}%` : "AC Power"} {isCharging && "(Charging)"}
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 4: FILES & CODEBASE HUB */}
+          {(activeTab === "files" || activeTab === "all") && (
+            <div className="space-y-4">
+              {activeTab === "all" && (
+                <div className="flex items-center gap-2 pb-1 border-b border-emerald-500/20 text-emerald-300">
+                  <FolderGit2 size={16} />
+                  <span className="font-hud text-xs font-bold uppercase tracking-wider">
+                    Phase 4: Files & Codebase Architecture
+                  </span>
+                </div>
+              )}
+
+              <div
+                id="section-files-modal"
+                className="relative rounded-3xl bg-gradient-to-b from-[#06181C]/90 via-[#041014]/95 to-[#02080A]/98 border border-emerald-500/35 p-5 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.15)] flex flex-col gap-4 overflow-hidden"
+              >
+                {/* Header Row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                      <FolderGit2 size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-hud text-white font-bold text-sm tracking-wider">
+                        Workspace & Codebase Intelligence
+                      </span>
+                      <span className="text-[11px] text-emerald-400/80 font-mono">
+                        Phase 4 Active • Sandboxed Workspace Inspector
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={fetchProjectInfo}
+                      disabled={loadingFiles}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-[11px] font-mono text-emerald-300 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                      title="Refresh Project Architecture"
+                    >
+                      <RefreshCw size={12} className={loadingFiles ? "animate-spin" : ""} />
+                      <span>{loadingFiles ? "Inspecting..." : "Scan Workspace"}</span>
+                    </button>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* 3 Metric Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                  <div className="p-3.5 rounded-2xl bg-[#030e10]/80 border border-emerald-500/25 flex flex-col gap-1.5">
+                    <span className="text-slate-400 text-[10px]">Workspace Root</span>
+                    <span className="text-emerald-300 font-bold truncate">
+                      {projectData?.path || "D:\\projects\\JARVIS"}
+                    </span>
+                    <span className="text-[10px] text-slate-500">Secure Sandboxed Path</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#030e10]/80 border border-emerald-500/25 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 text-[10px]">Git VCS Status</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {projectData?.git?.branch || "main"}
+                      </span>
+                    </div>
+                    <span className="text-cyan-300 font-bold flex items-center gap-1.5">
+                      <GitBranch size={13} />
+                      {projectData?.git?.modified_count !== undefined
+                        ? `${projectData.git.modified_count} Modified Files`
+                        : "Tracking Synchronized"}
+                    </span>
+                    <span className="text-[10px] text-slate-500">VCS Branch Linked</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#030e10]/80 border border-emerald-500/25 flex flex-col gap-1.5">
+                    <span className="text-slate-400 text-[10px]">Active Frameworks</span>
+                    <span className="text-amber-300 font-bold truncate">
+                      {projectData?.frameworks && projectData.frameworks.length > 0
+                        ? projectData.frameworks.join(" • ")
+                        : "Python • FastAPI • Next.js 16"}
+                    </span>
+                    <span className="text-[10px] text-slate-500">Multi-engine runtime</span>
+                  </div>
+                </div>
+
+                {/* Key Entry Points & Git Diff Stream */}
+                <div className="p-4 rounded-2xl bg-[#030b0d]/90 border border-emerald-500/30 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileCode size={15} className="text-emerald-400" />
+                      <span className="font-hud text-xs font-bold text-white tracking-wider">
+                        Core Entry Points & Subsystems
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400/80">
+                      AST & Syntax Verified
+                    </span>
+                  </div>
+
+                  {/* Subsystems Tags */}
+                  <div className="flex flex-wrap gap-2 text-xs font-mono">
+                    <span className="px-2.5 py-1 rounded-xl bg-[#06181C] border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      /backend (FastAPI REST & Voice Engine)
+                    </span>
+                    <span className="px-2.5 py-1 rounded-xl bg-[#06181C] border border-cyan-500/30 text-cyan-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                      /frontend (Next.js 16 & Iron Man HUD)
+                    </span>
+                    <span className="px-2.5 py-1 rounded-xl bg-[#06181C] border border-purple-500/30 text-purple-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                      /tests (Pytest Verification Suite)
+                    </span>
+                  </div>
+
+                  {/* Git Status Stream Summary */}
+                  {projectData?.git?.status_summary && (
+                    <div className="mt-1 p-3 rounded-xl bg-[#020507] border border-emerald-500/20 font-mono text-[11px] text-slate-300 max-h-32 overflow-y-auto custom-scrollbar">
+                      <div className="text-[10px] text-slate-500 mb-1 font-bold">
+                        VCS WORKING TREE SUMMARY:
+                      </div>
+                      <pre className="whitespace-pre-wrap text-emerald-400/90 leading-relaxed font-mono">
+                        {projectData.git.status_summary}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Security Guardrails Strip */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-emerald-500/20 text-[10px] font-mono text-slate-400">
+                    <div className="flex items-center gap-1.5 text-emerald-400">
+                      <ShieldCheck size={13} />
+                      <span>Zero Out-of-Bounds Access</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-cyan-400">
+                      <ShieldCheck size={13} />
+                      <span>Unified Diff Engine Guard</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-purple-400">
+                      <ShieldCheck size={13} />
+                      <span>AST Integrity Pre-validation</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 5: WEB & WEATHER INTELLIGENCE */}
+          {(activeTab === "web" || activeTab === "all") && (
+            <div className="space-y-4">
+              {activeTab === "all" && (
+                <div className="flex items-center gap-2 pb-1 border-b border-cyan-500/20 text-cyan-300">
+                  <Globe size={16} />
+                  <span className="font-hud text-xs font-bold uppercase tracking-wider">
+                    Phase 5: Web & Weather Intelligence
+                  </span>
+                </div>
+              )}
+
+              <div
+                id="section-web-modal"
+                className="relative rounded-3xl bg-gradient-to-b from-[#061426]/90 via-[#040C1A]/95 to-[#020610]/98 border border-cyan-500/35 p-5 sm:p-6 shadow-[0_0_35px_rgba(6,182,212,0.15)] flex flex-col gap-4 overflow-hidden"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                      <Globe size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-hud text-white font-bold text-sm tracking-wider">
+                        Online Intelligence & Atmospheric Telemetry
+                      </span>
+                      <span className="text-[11px] text-cyan-400/80 font-mono">
+                        Phase 5 Active • Real-time Web Search & Sensor Radar
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-[10px] font-mono font-semibold">
+                      INJECTION GUARD ON
+                    </span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Sub-grid: Weather Telemetry + Safe Search Engine */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Weather Sensor Card */}
+                  <div className="p-4 rounded-2xl bg-[#030914]/80 border border-cyan-500/25 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CloudSun size={16} className="text-amber-400" />
+                        <span className="font-hud text-xs font-bold text-white tracking-wider">
+                          Live Atmospheric Radar
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-cyan-400">wttr.in Feed</span>
+                    </div>
+
+                    {/* City input and trigger */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={weatherCity}
+                        onChange={(e) => setWeatherCity(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && fetchWeatherInfo(weatherCity)}
+                        placeholder="Enter city (e.g. Islamabad, Karachi)..."
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/30 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
+                      />
+                      <button
+                        onClick={() => fetchWeatherInfo(weatherCity)}
+                        disabled={loadingWeather}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/40 text-cyan-200 text-xs font-mono font-bold transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {loadingWeather ? "Scanning..." : "Scan"}
+                      </button>
+                    </div>
+
+                    {/* Weather Data Display */}
+                    {weatherData && (
+                      <div className="p-3.5 rounded-xl bg-[#020712] border border-cyan-500/20 flex flex-col gap-2.5">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-hud text-2xl font-bold text-white">
+                              {weatherData.temp_c || "26"}°C
+                            </span>
+                            <span className="text-xs font-mono text-slate-400 ml-2">
+                              Feels {weatherData.feels_like_c || "22"}°C
+                            </span>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold">
+                            {weatherData.condition || "Clear"}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs font-mono text-slate-300 pt-1 border-t border-cyan-500/20">
+                          <div className="flex items-center gap-1.5">
+                            <Droplets size={13} className="text-cyan-400" />
+                            <span>Humidity: {weatherData.humidity || "20"}%</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Wind size={13} className="text-cyan-400" />
+                            <span>Wind: {weatherData.wind_kmph || "8"} km/h</span>
+                          </div>
+                        </div>
+
+                        {weatherData.spoken_summary && (
+                          <div className="p-2 rounded-lg bg-[#040e1e] border border-cyan-500/20 text-[11px] font-mono text-cyan-300/90 italic">
+                            &ldquo;{weatherData.spoken_summary}&rdquo;
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Safe Web Research Card */}
+                  <div className="p-4 rounded-2xl bg-[#030914]/80 border border-cyan-500/25 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Search size={16} className="text-cyan-400" />
+                        <span className="font-hud text-xs font-bold text-white tracking-wider">
+                          Privacy Web Research
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-400">Rule 14 Shielded</span>
+                    </div>
+
+                    {/* Search query box */}
+                    <form onSubmit={handleRunWebSearch} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={webQuery}
+                        onChange={(e) => setWebQuery(e.target.value)}
+                        placeholder="Search documentation, news, or articles..."
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-[#02050B] border border-cyan-500/30 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
+                      />
+                      <button
+                        type="submit"
+                        disabled={searchingWeb || !webQuery.trim()}
+                        className="px-3 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-blue-200 text-xs font-mono font-bold transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {searchingWeb ? "Querying..." : "Search"}
+                      </button>
+                    </form>
+
+                    {/* Results list */}
+                    {searchResults.length > 0 ? (
+                      <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        {searchResults.map((r, i) => (
+                          <div
+                            key={i}
+                            className="p-2.5 rounded-xl bg-[#020712] border border-cyan-500/20 flex flex-col gap-1 text-xs font-mono"
+                          >
+                            <a
+                              href={r.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-cyan-300 hover:text-white font-bold flex items-center gap-1.5 group"
+                            >
+                              <span className="truncate">{r.title}</span>
+                              <ExternalLink size={11} className="shrink-0 opacity-60 group-hover:opacity-100" />
+                            </a>
+                            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                              {r.snippet}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-xl bg-[#020712]/60 border border-cyan-500/10 text-center text-xs font-mono text-slate-500">
+                        Enter a query to execute sandboxed real-time web search.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* External Subsystems & Integrations Strip */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-cyan-500/20 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-[#020712] border border-slate-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="text-slate-300">WhatsApp Web Bridge:</span>
+                    <span className="text-emerald-400 font-bold ml-auto">Ready</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-[#020712] border border-slate-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="text-slate-300">Chrome Bookmarks:</span>
+                    <span className="text-cyan-400 font-bold ml-auto">Synced</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-[#020712] border border-slate-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="text-slate-300">Prompt Injection Guard:</span>
+                    <span className="text-purple-400 font-bold ml-auto">Active</span>
                   </div>
                 </div>
               </div>

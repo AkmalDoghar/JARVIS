@@ -459,3 +459,81 @@ def publish_social_post(
         "posting_url": posting_url,
         "message": msg
     }
+
+
+# ─────────────────────────────────────────────
+# 6. Creator Email Management & Direct Launch
+# ─────────────────────────────────────────────
+def open_creator_email(
+    identifier: Optional[str] = "primary",
+    action: Optional[str] = "inbox",
+    recipient: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Open one of creator Akmal Sir's registered email accounts in the browser.
+    
+    Args:
+        identifier: Target email identifier ('primary', 'personal', 'work', 'developer', 'official', '1', '2', '3', '4', or email address).
+        action: 'inbox' to open mail folder, or 'compose' to start a new draft.
+        recipient: If action is compose, optional target email address.
+    """
+    from backend.database.creator_dossier import find_creator_email, compute_inbox_url, compute_compose_url
+    from backend.tools.system_control import _launch_browser
+
+    target_email = find_creator_email(identifier or "primary")
+    if not target_email:
+        return {
+            "success": False,
+            "error": "No registered emails found in Creator Dossier.",
+            "suggestion": "Aap Creator Digital Dossier ke 'Email Matrix' tab mein jaa kar apni emails configure kar sakte hain."
+        }
+
+    email_addr = (target_email.get("email") or "").strip()
+    label = target_email.get("label", "Email Account")
+    provider = target_email.get("provider", "gmail")
+    custom_inbox = (target_email.get("inbox_url") or "").strip()
+
+    if not email_addr and not custom_inbox:
+        return {
+            "success": False,
+            "error": f"Email address for '{label}' is not configured yet in Creator Dossier.",
+            "suggestion": f"Aap Creator Dossier mein {label} ka email enter kar lein, phir JARVIS foran open kar dega."
+        }
+
+    # Determine URL
+    if action == "compose":
+        url = compute_compose_url(email_addr, provider=provider, to=recipient or "")
+        msg_action = "new compose draft"
+    else:
+        url = custom_inbox or compute_inbox_url(email_addr, provider=provider)
+        msg_action = "inbox"
+
+    try:
+        _launch_browser(url)
+        spoken_msg = f"Akmal Sir, aapka {label} ({email_addr or provider}) ka {msg_action} browser mein open kar diya gaya hai."
+        return {
+            "success": True,
+            "label": label,
+            "email": email_addr,
+            "provider": provider,
+            "url": url,
+            "action": action,
+            "message": spoken_msg,
+            "spoken_response": spoken_msg
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Failed to launch browser: {str(e)}"}
+
+
+def get_creator_emails_summary() -> Dict[str, Any]:
+    """Retrieve summary of all registered emails in Creator Dossier."""
+    from backend.database.creator_dossier import get_creator_emails
+    emails = get_creator_emails()
+    active = [e for e in emails if isinstance(e, dict) and e.get("email")]
+    return {
+        "success": True,
+        "total_slots": len(emails),
+        "configured_count": len(active),
+        "emails": emails,
+        "message": f"Found {len(active)} configured email account(s) out of {len(emails)} registered slots."
+    }

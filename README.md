@@ -1,7 +1,7 @@
 # ⚡ JARVIS AI ASSISTANT
 
 **Next-Generation Autonomous Personal AI Operating System for Windows**  
-Designed, Architected & Created for **Muhammad Akmal (Akmal bhai)**.
+Designed, Architected & Created by **Muhammad Akmal (Akmal Sir)** ([@AkmalDoghar](https://github.com/AkmalDoghar)).
 
 ---
 
@@ -113,8 +113,8 @@ Navigate to `http://localhost:3000` in your browser.
 
 ---
 
-## 👤 Master Creator
-**Muhammad Akmal (Akmal bhai)**  
+## 👤 Master Creator & Lead Architect
+**Muhammad Akmal (Akmal Sir)**  
 - Portfolio: [akmalcode.vercel.app](https://akmalcode.vercel.app)  
 - GitHub: [@AkmalDoghar](https://github.com/AkmalDoghar)  
 - LinkedIn: [linkedin.com/in/muhammad-akmal-dev](https://linkedin.com/in/muhammad-akmal-dev/)

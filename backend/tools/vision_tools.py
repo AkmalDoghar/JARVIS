@@ -257,7 +257,7 @@ def inspect_screen(
             "success": False,
             "offline": True,
             "error": "Visual inspection is currently unavailable in offline mode as no local vision model is installed. Please connect to the internet or configure a local vision model.",
-            "spoken_response": "Ji Akmal bhai, offline mode mein visual analysis available nahi hai kyun ke local vision model configure nahi hai. Internet connect karein.",
+            "spoken_response": "Ji Akmal Sir, offline mode mein visual analysis available nahi hai kyun ke local vision model configure nahi hai. Internet connect karein.",
             "saved_to": saved_to,
             "width": cap["width"],
             "height": cap["height"]

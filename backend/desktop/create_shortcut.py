@@ -19,9 +19,14 @@ def create_desktop_shortcut() -> str:
     desktop_dir = ws.SpecialFolders("Desktop")
     shortcut_path = os.path.join(desktop_dir, "JARVIS.lnk")
 
+    pythonw_path = os.path.join(project_root, ".venv", "Scripts", "pythonw.exe")
+    if not os.path.exists(pythonw_path):
+        pythonw_path = "pythonw.exe"
+    desktop_script = os.path.join(project_root, "start_jarvis_desktop.py")
+
     shortcut = ws.CreateShortcut(shortcut_path)
-    shortcut.TargetPath = "wscript.exe"
-    shortcut.Arguments = f'"{vbs_path}"'
+    shortcut.TargetPath = pythonw_path
+    shortcut.Arguments = f'"{desktop_script}"'
     shortcut.WorkingDirectory = project_root
     shortcut.Description = "JARVIS - Autonomous Personal AI Operating System for Windows"
     if os.path.exists(ico_path):
