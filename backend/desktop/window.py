@@ -17,14 +17,14 @@ import win32con
 import win32gui
 
 
-# Candidate Chromium executables supporting native --app mode (Chrome first, then Edge)
+# Candidate Chromium executables supporting native --app mode (Edge first for clean isolation from Chrome browser)
 CANDIDATE_EXECUTABLES = [
+    os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
+    os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+    os.path.expandvars(r"%LocalAppData%\Microsoft\Edge\Application\msedge.exe"),
     os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
     os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
     os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
-    os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
-    os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
-    os.path.expandvars(r"%LocalAppData%\Microsoft\Edge\Application\msedge.exe"),
 ]
 
 
@@ -52,6 +52,7 @@ def brand_jarvis_window(hwnd: int) -> bool:
 
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     ico_path = os.path.join(project_root, "backend", "desktop", "jarvis.ico")
+    jarvis_exe = os.path.join(project_root, "JARVIS.exe")
     pythonw_exe = os.path.join(project_root, ".venv", "Scripts", "pythonw.exe")
     if not os.path.exists(pythonw_exe):
         pythonw_exe = "pythonw.exe"
@@ -62,13 +63,17 @@ def brand_jarvis_window(hwnd: int) -> bool:
         from win32com.propsys import propsys, pscon
         store = propsys.SHGetPropertyStoreForWindow(hwnd)
         store.SetValue(pscon.PKEY_AppUserModel_ID, propsys.PROPVARIANTType("JARVIS.Personal.AI.Assistant"))
-        store.SetValue(pscon.PKEY_AppUserModel_RelaunchCommand, propsys.PROPVARIANTType(f'"{pythonw_exe}" "{script_path}"'))
-        if os.path.exists(ico_path):
-            store.SetValue(pscon.PKEY_AppUserModel_RelaunchIconResource, propsys.PROPVARIANTType(f"{ico_path},0"))
+        if os.path.exists(jarvis_exe):
+            store.SetValue(pscon.PKEY_AppUserModel_RelaunchCommand, propsys.PROPVARIANTType(f'"{jarvis_exe}"'))
+            store.SetValue(pscon.PKEY_AppUserModel_RelaunchIconResource, propsys.PROPVARIANTType(f'"{jarvis_exe}",0'))
+        else:
+            store.SetValue(pscon.PKEY_AppUserModel_RelaunchCommand, propsys.PROPVARIANTType(f'"{pythonw_exe}" "{script_path}"'))
+            if os.path.exists(ico_path):
+                store.SetValue(pscon.PKEY_AppUserModel_RelaunchIconResource, propsys.PROPVARIANTType(f"{ico_path},0"))
         store.SetValue(pscon.PKEY_AppUserModel_RelaunchDisplayNameResource, propsys.PROPVARIANTType("JARVIS Assistant"))
         store.Commit()
     except Exception as e:
-        pass
+        print(f"[Window] Property store warning: {e}")
 
     # 2. Inject Arc Reactor icon into window and taskbar button
     try:
@@ -80,7 +85,7 @@ def brand_jarvis_window(hwnd: int) -> bool:
             if hicon_small:
                 win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, hicon_small)
     except Exception as e:
-        pass
+        print(f"[Window] SetIcon warning: {e}")
 
     return True
 
