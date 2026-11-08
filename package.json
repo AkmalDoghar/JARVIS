@@ -1,0 +1,15 @@
+{
+  "name": "jarvis-suite",
+  "version": "2.0.0",
+  "description": "JARVIS AI Suite - Desktop & Mobile Companion for Muhammad Akmal",
+  "scripts": {
+    "start": "python start_jarvis_desktop.py",
+    "desktop": "python start_jarvis_desktop.py",
+    "mobile": "cd mobile && npx expo start",
+    "mobile:android": "cd mobile && npx expo run:android",
+    "backend": ".venv\\Scripts\\python -m uvicorn backend.main:app --reload",
+    "frontend": "cd frontend && npm run dev"
+  },
+  "author": "Muhammad Akmal (@AkmalDoghar)",
+  "license": "MIT"
+}

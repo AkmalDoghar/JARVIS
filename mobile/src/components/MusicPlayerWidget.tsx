@@ -263,3 +263,4 @@ const styles = StyleSheet.create({
     shadowColor: '#38ef7d',
   },
 });
+

@@ -69,3 +69,4 @@ To create a standalone `.apk` installable file on Android:
 cd mobile
 npx eas-cli build -p android --profile preview
 ```
+

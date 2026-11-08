@@ -10,3 +10,4 @@ echo Scan the QR code using Expo Go app on your Android phone.
 echo.
 npx expo start
 pause
+

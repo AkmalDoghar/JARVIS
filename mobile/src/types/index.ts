@@ -69,3 +69,4 @@ export interface BikeTelemetry {
   currentTime: string;
   isBikeModeActive: boolean;
 }
+
