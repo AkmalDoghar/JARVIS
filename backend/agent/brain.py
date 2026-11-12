@@ -86,6 +86,20 @@ def parse_browser_search(text: str) -> Optional[Dict[str, Any]]:
     if m:
         return {"platform": "youtube", "query": m.group(1).strip(), "play": True}
 
+    # 3. Direct song / music play requests (defaults directly to YouTube auto-play)
+    m = re.match(r"^(?:please\s+)?(?:play|listen\s+(?:to)?)\s+(?:song\s+)?(.+?)(?:\s+on\s+youtube)?$", t_clean, re.I)
+    if m:
+        return {"platform": "youtube", "query": m.group(1).strip(), "play": True}
+
+    m = re.match(r"^(.+?)\s+(?:ka\s+)?(?:song|gana|geet|qawwali|track|video)?\s*(?:play\s+(?:kro|kardo|karo)|chalao|chala\s+do|lagao|laga\s+do|sunao|suna\s+do)$", t_clean, re.I)
+    if m:
+        clean_target = re.sub(r"^(?:youtube\s+(?:per|par|pe|mein|main|pr)\s+)", "", m.group(1).strip(), flags=re.I)
+        return {"platform": "youtube", "query": clean_target.strip(), "play": True}
+
+    m = re.match(r"^(?:chalao|lagao|sunao|play)\s+(?:song\s+)?(.+)$", t_clean, re.I)
+    if m:
+        return {"platform": "youtube", "query": m.group(1).strip(), "play": True}
+
     return None
 
 
@@ -894,10 +908,11 @@ SYSTEM_PROMPT = (
     "- YOUTUBE AUTO-PLAY: When the user asks to play a song, video, or music on YouTube (e.g. 'youtube per ye song search kro or play kro', 'youtube par tajdar e haram chalao', 'play satinder sartaaj on youtube', 'song play karo'): ALWAYS call `play_youtube_video`! This resolves the direct watch URL in ~1s and launches it so it auto-plays immediately in the browser. "
     "- WEBSITE DEEP ANALYSIS: When the user asks to open and analyze/explain any website or portal (e.g. 'ye website open karo aur analyse karo', 'open vercel and analyze it', 'website check kar ke batao kya hai'): ALWAYS call `analyze_website` with `url` and optional `profile_name`. It opens the website in browser and returns a structured analysis report! "
     "- GOOGLE 4 ACCOUNTS & CHROME PROFILES: M. Akmal has 4 Google accounts / Chrome profiles on this PC: "
-    "   * Account 1 (Default): Rana Akmal (ranaakmalr703@gmail.com) - Personal / Default "
-    "   * Account 2 (Profile 1): M. Akmal (84pakarmy@gmail.com) - Personal / Pak Army "
+    "   * Account 1 (Default) [PRIMARY DEFAULT PROFILE]: Rana Akmal (ranaakmalr703@gmail.com) - Personal / Default "
+    "   * Account 2 (Profile 1): M. Akmal (84pakarmy@gmail.com) - Secondary / Pak Army "
     "   * Account 3 (Profile 3): Virtual University / MUHAMMAD AKMAL (bc250211604mak@vu.edu.pk) - VU LMS / Academic "
     "   * Account 4 (Profile 4): Next.js Developer / Muhammad Akmal (m.akmal.dev42@gmail.com) - Web Development "
+    "- CRITICAL PROFILE ENFORCEMENT: By default, ALL browser, search, and YouTube operations MUST target the PRIMARY PROFILE (Account 1 / Default - Rana Akmal / ranaakmalr703@gmail.com)! NEVER route to Account 2 (84pakarmy@gmail.com) unless the user explicitly requests 'Account 2', 'dosra account', or '84pakarmy'! "
     "- To list all Google accounts: call `list_google_accounts`. "
     "- When the user asks to open or use any profile (e.g. 'pehla account', 'Account 1', 'meri uni wali id', 'developer account', '84pakarmy', etc.): call `open_chrome_profile(profile_name, url)` or `analyze_website(url, profile_name)`. "
     "- WHATSAPP MESSAGING & AUTO-FORMATTING (DESKTOP & WEB): When the user asks to send a WhatsApp message to someone (e.g. 'Ali ko WhatsApp par message bhejo: Kal milte hain' or 'WhatsApp Web per Wajid ko message bhejo: kal meeting hai' or 'send message on whatsapp to X'): "
@@ -1171,7 +1186,7 @@ class JarvisBrain:
             inspect = any(k in message.lower() for k in ("inspect", "developer mode", "devtools", "dev mode"))
 
             if platform == "youtube" and is_play:
-                tool_res = execute_tool("play_youtube_video", {"query": query})
+                tool_res = execute_tool("play_youtube_video", {"query": query, "profile_name": "Default"})
                 user_is_roman = is_roman_urdu_input(message)
                 is_ur = user_is_roman or response_language in ("ur", "hi")
                 res_data = tool_res.get("result", {})
@@ -1188,10 +1203,11 @@ class JarvisBrain:
                     "spoken_response": full_spoken,
                     "status": "success",
                     "tool_executed": "play_youtube_video",
-                    "tool_result": tool_res,
+                    "tool_result": res_data,
                     "model": "instant-routing",
-                    "requires_confirmation": False,
-                    "chips": sugg_chips or ["Volume barhao", "Pause karo", "Next song chalao"]
+                    "provider": "fast-path",
+                    "suggestions": sugg_chips or ["Volume barhao", "Pause karo", "Next song chalao"],
+                    "requires_confirmation": False
                 }
 
             if platform == "google":

@@ -375,6 +375,8 @@ def _launch_browser(url: str, inspect: bool = False, profile: Optional[str] = No
         cmd = [chrome_exe]
         if target_profile:
             cmd.append(f"--profile-directory={target_profile}")
+        # Force a dedicated window for this profile so Chrome doesn't attach to another profile's window
+        cmd.append("--new-window")
         if inspect:
             cmd.append("--auto-open-devtools-for-tabs")
         cmd.append(clean_url)
@@ -710,12 +712,15 @@ def open_chrome_profile(profile_name: str, url: Optional[str] = None) -> Dict[st
     if not chrome_exe:
         return {"success": False, "error": "Google Chrome executable not found on PC."}
 
-    cmd = [chrome_exe, f"--profile-directory={matched_dir}"]
+    cmd = [chrome_exe, f"--profile-directory={matched_dir}", "--new-window"]
     if target_url:
         cmd.append(target_url)
 
     try:
-        subprocess.Popen(cmd)
+        creation_flags = 0
+        if os.name == "nt":
+            creation_flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        subprocess.Popen(cmd, creationflags=creation_flags)
         prof_display = matched_info.get('gaia_name') or matched_info.get('name') or matched_dir
         target_desc = f" and opened {target_url}" if target_url else ""
         return {

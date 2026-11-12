@@ -280,8 +280,10 @@ def read_webpage(url: str, max_chars: int = 2500) -> Dict[str, Any]:
 def play_youtube_video(query: str, profile_name: Optional[str] = None) -> Dict[str, Any]:
     """
     Search YouTube and automatically launch & play the top matching video in the browser.
-    Resolves the direct video watch URL within ~1s via rapid HTML parsing with yt-dlp fallback.
-    Optionally launches within a specific Google/Chrome user profile.
+    Resolves the direct video watch URL within ~1.2s via structured ytInitialData parsing
+    with yt-dlp fallback and search page fallback.
+    Always defaults strictly to creator's Primary Profile ('Default' - Rana Akmal / ranaakmalr703@gmail.com)
+    unless explicitly instructed otherwise.
     """
     raw_q = query.strip()
     if not raw_q:
@@ -300,9 +302,11 @@ def play_youtube_video(query: str, profile_name: Optional[str] = None) -> Dict[s
     top_vid_id = None
     video_title = None
     video_url = None
+    video_length = ""
+    channel_name = ""
 
     if is_online():
-        # Step 1: Rapid HTTP fetch and video ID extraction (~1.0s)
+        # Step 1: Rapid HTTP fetch with structured ytInitialData parsing (~1.0s)
         try:
             search_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(clean_q)}"
             headers = {
@@ -310,26 +314,52 @@ def play_youtube_video(query: str, profile_name: Optional[str] = None) -> Dict[s
                 "Accept-Language": "en-US,en;q=0.9"
             }
             req = urllib.request.Request(search_url, headers=headers)
-            with urllib.request.urlopen(req, timeout=3.5) as resp:
+            with urllib.request.urlopen(req, timeout=4.5) as resp:
                 html = resp.read().decode("utf-8", errors="ignore")
 
-            vids = re.findall(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
-            seen = set()
-            unique_vids = []
-            for v in vids:
-                if v not in seen:
-                    seen.add(v)
-                    unique_vids.append(v)
+            match = re.search(r'var ytInitialData\s*=\s*({.+?});</script>', html)
+            if not match:
+                match = re.search(r'ytInitialData\s*=\s*({.+?});', html)
 
-            title_matches = re.findall(r'"title":\{"runs":\[\{"text":"(.*?)"\}\]', html)
-            if unique_vids:
-                top_vid_id = unique_vids[0]
-                video_url = f"https://www.youtube.com/watch?v={top_vid_id}"
-                video_title = title_matches[0] if title_matches else clean_q
+            if match:
+                try:
+                    data = json.loads(match.group(1))
+                    videos = []
+                    def walk(node):
+                        if isinstance(node, dict):
+                            if "videoRenderer" in node:
+                                vr = node["videoRenderer"]
+                                vid = vr.get("videoId")
+                                title_runs = vr.get("title", {}).get("runs", [])
+                                title = title_runs[0].get("text") if title_runs else vr.get("title", {}).get("accessibility", {}).get("accessibilityData", {}).get("label")
+                                length = vr.get("lengthText", {}).get("simpleText", "")
+                                ch_runs = vr.get("ownerText", {}).get("runs", [])
+                                ch = ch_runs[0].get("text") if ch_runs else ""
+                                if vid and len(vid) == 11 and title:
+                                    videos.append({
+                                        "id": vid,
+                                        "title": title,
+                                        "length": length,
+                                        "channel": ch
+                                    })
+                            for val in node.values():
+                                walk(val)
+                        elif isinstance(node, list):
+                            for item in node:
+                                walk(item)
+                    walk(data)
+                    if videos:
+                        top_vid_id = videos[0]["id"]
+                        video_title = videos[0]["title"]
+                        video_length = videos[0]["length"]
+                        channel_name = videos[0]["channel"]
+                        video_url = f"https://www.youtube.com/watch?v={top_vid_id}"
+                except Exception:
+                    pass
         except Exception:
             pass
 
-        # Step 2: yt-dlp fallback if rapid regex didn't resolve
+        # Step 2: yt-dlp fallback if structured parsing did not resolve
         if not top_vid_id:
             try:
                 import yt_dlp
@@ -341,6 +371,8 @@ def play_youtube_video(query: str, profile_name: Optional[str] = None) -> Dict[s
                         top_vid_id = entry.get("id")
                         video_url = entry.get("url") or f"https://www.youtube.com/watch?v={top_vid_id}"
                         video_title = entry.get("title") or clean_q
+                        video_length = str(entry.get("duration", ""))
+                        channel_name = entry.get("uploader", "")
             except Exception:
                 pass
 
@@ -349,18 +381,18 @@ def play_youtube_video(query: str, profile_name: Optional[str] = None) -> Dict[s
         video_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(clean_q)}"
         video_title = clean_q
 
-    # Launch in browser / Chrome profile
+    # Target Primary Chrome Profile by default (Akmal Sir's primary profile: 'Default' - Rana Akmal / ranaakmalr703@gmail.com)
+    target_prof = profile_name if profile_name else "Default"
     opened_profile = None
+
     try:
         from backend.tools.system_control import _launch_browser, open_chrome_profile
-        if profile_name:
-            res_prof = open_chrome_profile(profile_name, video_url)
-            if res_prof.get("success"):
-                opened_profile = res_prof.get("profile_name")
-            else:
-                _launch_browser(video_url)
+        res_prof = open_chrome_profile(target_prof, video_url)
+        if res_prof.get("success"):
+            opened_profile = res_prof.get("profile_name") or target_prof
         else:
-            _launch_browser(video_url)
+            _launch_browser(video_url, profile=target_prof)
+            opened_profile = target_prof
     except Exception:
         try:
             import webbrowser
@@ -370,13 +402,19 @@ def play_youtube_video(query: str, profile_name: Optional[str] = None) -> Dict[s
 
     disp_title = video_title or clean_q
     prof_note = f" in Chrome profile '{opened_profile}'" if opened_profile else ""
+    thumbnail_url = f"https://i.ytimg.com/vi/{top_vid_id}/hqdefault.jpg" if top_vid_id else None
+
     return {
         "success": True,
         "video_id": top_vid_id,
         "video_url": video_url,
+        "url": video_url,
         "title": disp_title,
+        "duration": video_length,
+        "channel": channel_name,
+        "thumbnail": thumbnail_url,
         "query": clean_q,
-        "profile": opened_profile,
+        "profile": opened_profile or target_prof,
         "message": f"Playing '{disp_title}' on YouTube{prof_note}: {video_url}"
     }
 

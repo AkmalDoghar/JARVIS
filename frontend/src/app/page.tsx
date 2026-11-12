@@ -98,6 +98,18 @@ export default function Dashboard() {
     suggestions?: string[];
     provider?: string;
     offline_mode?: boolean;
+    tool_executed?: string;
+    tool_result?: {
+      url?: string;
+      title?: string;
+      video_id?: string;
+      duration?: string;
+      channel?: string;
+      profile?: string;
+      thumbnail?: string;
+      message?: string;
+      [key: string]: any;
+    };
   }[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1146,6 +1158,9 @@ export default function Dashboard() {
       });
       clearTimeout(timeoutId);
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || `Server error (${response.status})`);
+      }
       const reply = data.response || "No response";
       const spoken = data.spoken_response || cleanTextForSpeech(reply);
 
@@ -1158,6 +1173,12 @@ export default function Dashboard() {
         });
       }
 
+      if (data.tool_executed === "play_youtube_video") {
+        const songName = data.tool_result?.title || "Track";
+        const profName = data.tool_result?.profile || "Default";
+        showNotice(`🎵 YouTube Auto-Play: "${songName.slice(0, 32)}..." [${profName}]`);
+      }
+
       setMessages(prev => [...prev, { 
         id: createMessageId(), 
         sender: "jarvis", 
@@ -1166,14 +1187,17 @@ export default function Dashboard() {
         suggestions: data.suggestions || [],
         time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
         provider: data.provider,
-        offline_mode: Boolean(data.offline_mode)
+        offline_mode: Boolean(data.offline_mode),
+        tool_executed: data.tool_executed,
+        tool_result: data.tool_result,
       }]);
       await speakResponse(spoken);
     } catch (err: unknown) {
       const isAbort = err instanceof Error && err.name === "AbortError";
+      const errMsg = err instanceof Error ? err.message : "Connection error with JARVIS AI core.";
       const errorMsg = isAbort 
         ? "JARVIS AI core request timed out. Please try again." 
-        : "Connection error with JARVIS AI core.";
+        : `JARVIS Notice: ${errMsg}`;
       setMessages(prev => [...prev, { 
         id: createMessageId(), 
         sender: "jarvis", 
@@ -1949,6 +1973,94 @@ export default function Dashboard() {
                         <div className="whitespace-pre-wrap selection:bg-cyan-500/40 font-sans text-xs">
                           {msg.text}
                         </div>
+
+                        {/* Tactical YouTube Audio Player HUD Card */}
+                        {msg.tool_executed === "play_youtube_video" && (
+                          <div className="mt-2.5 p-3 rounded-2xl bg-gradient-to-br from-[#0c1630] to-[#040915] border border-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.2)] flex flex-col gap-2 font-mono">
+                            <div className="flex items-center justify-between text-[10px] pb-1 border-b border-white/10">
+                              <div className="flex items-center gap-1.5 text-red-400 font-extrabold uppercase tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shadow-[0_0_8px_#ef4444]" />
+                                <span>YOUTUBE AUTO-PLAY // STREAM ACTIVE</span>
+                              </div>
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-950/90 border border-cyan-400/40 text-cyan-300 font-bold">
+                                {msg.tool_result?.profile ? `PROFILE: ${String(msg.tool_result.profile).toUpperCase()}` : "PROFILE: DEFAULT (RANA AKMAL)"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-start justify-between gap-2 pt-0.5">
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-bold text-slate-100 text-xs line-clamp-2">
+                                  {msg.tool_result?.title || "YouTube Media"}
+                                </span>
+                                {msg.tool_result?.channel && (
+                                  <span className="text-[10px] text-slate-400 truncate">
+                                    Artist: <strong className="text-cyan-300">{msg.tool_result.channel}</strong>
+                                  </span>
+                                )}
+                              </div>
+                              {msg.tool_result?.duration && (
+                                <span className="text-[10px] text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-500/30 shrink-0 font-bold">
+                                  ⏱ {msg.tool_result.duration}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                              {msg.tool_result?.url && (
+                                <a
+                                  href={msg.tool_result.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] px-2.5 py-1 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 text-red-200 flex items-center gap-1.5 transition-all shadow-sm font-bold"
+                                >
+                                  <Globe size={11} />
+                                  <span>Watch Video</span>
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleSend(undefined, "volume 50 percent karo")}
+                                className="text-[10px] px-2.5 py-1 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                              >
+                                🔊 50% Vol
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSend(undefined, "volume barhao")}
+                                className="text-[10px] px-2.5 py-1 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                              >
+                                🔊 Vol +
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSend(undefined, "next song chalao")}
+                                className="text-[10px] px-2.5 py-1 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                              >
+                                ⏭ Next Song
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tactical Web Portal Navigation HUD Card */}
+                        {(msg.tool_executed === "open_website" || msg.tool_executed === "open_smart_website") && (
+                          <div className="mt-2 p-2.5 rounded-2xl bg-[#040E24]/90 border border-cyan-500/35 text-[10px] font-mono flex items-center justify-between gap-2 shadow-sm">
+                            <div className="flex items-center gap-2 truncate text-cyan-300">
+                              <Globe size={13} className="text-cyan-400 shrink-0" />
+                              <span className="truncate">{msg.tool_result?.url || "Web Navigation"}</span>
+                            </div>
+                            {msg.tool_result?.url && (
+                              <a
+                                href={msg.tool_result.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-200 shrink-0 transition-all shadow-sm font-bold"
+                              >
+                                Open Tab ↗
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Proactive Follow-up Suggestion Chips */}

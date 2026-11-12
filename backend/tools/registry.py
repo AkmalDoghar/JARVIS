@@ -1020,7 +1020,7 @@ JARVIS_TOOLS_SCHEMA: List[Dict[str, Any]] = [
                     },
                     "profile_name": {
                         "type": "string",
-                        "description": "Optional Chrome profile or Google account to play in (e.g. 'Account 1', 'M. Akmal', 'developer')."
+                        "description": "Optional Chrome profile to play in. Defaults strictly to 'Default' (Account 1 - Rana Akmal / ranaakmalr703@gmail.com - Primary Profile). Do NOT specify Account 2 unless user explicitly requests it."
                     }
                 },
                 "required": ["query"]

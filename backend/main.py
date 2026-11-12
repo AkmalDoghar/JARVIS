@@ -45,6 +45,7 @@ class ChatResponse(BaseModel):
     model: str
     provider: str
     tool_executed: Optional[str] = None
+    tool_result: Optional[Any] = None
     requires_pin: Optional[bool] = False
     confirmation_id: Optional[str] = None
     suggestions: Optional[List[str]] = Field(default_factory=list)
@@ -85,15 +86,16 @@ def chat_endpoint(request: ChatRequest):
         response_language=request.response_language,
     )
     return ChatResponse(
-        response=result["response"],
+        response=result.get("response", "No response"),
         spoken_response=result.get("spoken_response"),
-        status=result["status"],
-        model=result["model"],
-        provider=result["provider"],
+        status=result.get("status", "success"),
+        model=result.get("model", "instant-routing"),
+        provider=result.get("provider", "instant-routing"),
         tool_executed=result.get("tool_executed"),
+        tool_result=result.get("tool_result"),
         requires_pin=result.get("requires_pin", False),
         confirmation_id=result.get("confirmation_id"),
-        suggestions=result.get("suggestions", []),
+        suggestions=result.get("suggestions", result.get("chips", [])),
     )
 
 @app.post("/api/voice/listen", response_model=VoiceInputResponse)
