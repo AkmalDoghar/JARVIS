@@ -1878,7 +1878,8 @@ def get_relevant_tools_schema(query: Optional[str] = None) -> List[Dict[str, Any
     web_triggers = (
         "search", "google", "youtube", "weather", "forecast", "barish", "rain", 
         "temp", "temperature", "mausam", "url", "link", "web", "internet", "news", "site",
-        "vercel", "leetcode", "leetcord", "expo", "map", "maps", "dashboard", "portal",
+        "vercel", "netlify", "netlift", "nextjs", "next.js", "openrouter", "infinityfree", "zidio",
+        "chatgpt", "canva", "gmail", "leetcode", "leetcord", "expo", "map", "maps", "dashboard", "portal",
         "play", "song", "chalao", "sunao", "lagao", "analyze", "analyse", "summary",
         "bookmark", "bookmarks", "book mark", "history", "saved page"
     )

@@ -147,22 +147,39 @@ def parse_website_analysis(text: str) -> Optional[Dict[str, Any]]:
         return None
 
     # Detect specified profile
-    profile_name = None
-    if any(k in t_low for k in ("developer", "nextjs", "next.js", "dev42")):
-        profile_name = "Account 4"
-    elif any(k in t_low for k in ("uni", "vu", "virtual university", "lms")):
-        profile_name = "Account 3"
-    elif any(k in t_low for k in ("84pakarmy", "pakarmy", "dosra", "doosra")):
-        profile_name = "Account 2"
-    elif any(k in t_low for k in ("pehla", "personal")):
-        profile_name = "Account 1"
+    profile_name = _extract_profile_from_text(t_low)
+
+    # Known tech framework to real official documentation website mapping
+    tech_map = {
+        "next.js": "https://nextjs.org",
+        "nextjs": "https://nextjs.org",
+        "node.js": "https://nodejs.org",
+        "nodejs": "https://nodejs.org",
+        "vue.js": "https://vuejs.org",
+        "vuejs": "https://vuejs.org",
+        "react.js": "https://react.dev",
+        "reactjs": "https://react.dev",
+        "react": "https://react.dev",
+        "express.js": "https://expressjs.com",
+        "expressjs": "https://expressjs.com",
+        "three.js": "https://threejs.org",
+        "threejs": "https://threejs.org",
+        "tailwind": "https://tailwindcss.com",
+        "tailwindcss": "https://tailwindcss.com"
+    }
+    for tech, real_url in tech_map.items():
+        if tech in t_low:
+            return {"url": real_url, "profile_name": profile_name}
 
     # Extract target URL/domain
     m = re.search(r'(https?://[^\s]+|[a-zA-Z0-9_-]+\.[a-zA-Z]{2,6}(?:/[^\s]*)?)', t_clean)
     if m:
-        return {"url": m.group(1), "profile_name": profile_name}
+        matched_str = m.group(1)
+        if matched_str.lower() in tech_map:
+            return {"url": tech_map[matched_str.lower()], "profile_name": profile_name}
+        return {"url": matched_str, "profile_name": profile_name}
 
-    portals = ("vercel", "github", "youtube", "leetcode", "expo", "lms", "python.org")
+    portals = ("vercel", "netlify", "netlift", "github", "youtube", "leetcode", "expo", "lms", "python.org", "chatgpt")
     for p in portals:
         if p in t_low:
             return {"url": p, "profile_name": profile_name}
@@ -171,14 +188,14 @@ def parse_website_analysis(text: str) -> Optional[Dict[str, Any]]:
 
 
 def _extract_profile_from_text(t_low: str) -> Optional[str]:
-    """Helper to detect requested profile from natural text."""
-    if any(k in t_low for k in ("developer", "nextjs", "next.js", "dev42", "chautha", "4th", "account 4")):
+    """Helper to detect requested profile from natural text. Requires explicit profile keywords."""
+    if any(k in t_low for k in ("developer profile", "developer account", "dev profile", "dev account", "nextjs profile", "nextjs account", "next.js profile", "next.js account", "dev42", "chautha account", "4th account", "account 4")):
         return "Account 4"
-    elif any(k in t_low for k in ("uni", "vu", "virtual university", "lms", "teesra", "3rd", "account 3")):
+    elif any(k in t_low for k in ("uni profile", "uni account", "vu profile", "vu account", "virtual university", "lms profile", "lms account", "teesra account", "3rd account", "account 3")):
         return "Account 3"
-    elif any(k in t_low for k in ("84pakarmy", "pakarmy", "dosra", "doosra", "2nd", "account 2")):
+    elif any(k in t_low for k in ("84pakarmy", "pakarmy", "dosra account", "doosra account", "2nd account", "account 2", "second profile")):
         return "Account 2"
-    elif any(k in t_low for k in ("pehla", "personal", "1st", "account 1")):
+    elif any(k in t_low for k in ("pehla account", "personal account", "1st account", "account 1", "default profile", "primary profile", "primary account")):
         return "Account 1"
     return None
 
@@ -270,23 +287,63 @@ def parse_history_query(text: str) -> Optional[Dict[str, Any]]:
 
 
 def parse_smart_portal_open(text: str) -> Optional[Dict[str, Any]]:
-    """Detect direct opening requests for user's authenticated portals, accounts, and services."""
+    """Detect direct opening requests for user's authenticated portals, accounts, bookmarks, and services."""
     t = text.strip()
     t_clean = re.sub(r"[?.!,;]+$", "", t).strip()
     t_low = t_clean.lower()
 
+    # Disqualify purely informational or meta statements / bug reports
+    if any(t_low.startswith(k) for k in ("kya ", "kyun ", "kyu ", "why ", "how ", "what ", "kese ", "kaise ")):
+        return None
+    if any(k in t_low for k in ("is ne nai kiya", "main ne kaha", "nai ho raha", "fail ho gaya", "issue hai", "nahi kiya")):
+        return None
+
+    # Exclude non-portal / system commands
+    if any(k in t_low for k in ("song", "gana", "geet", "qawwali", "music", "audio", "video", "play song", "tajdar")):
+        return None
+    if any(k in t_low for k in ("volume", "awaz", "brightness", "roshni", "wifi", "bluetooth", "hotspot", "settings", "setting")):
+        return None
+    if any(k in t_low for k in ("in vscode", "in vs code", "vscode", "vs code", "terminal", "cmd mein", "create folder", "create file", "inspect screen")):
+        return None
+    if any(k in t_low for k in ("call milao", "voice call", "video call", "status", "bhejo")):
+        return None
+
     profile_name = _extract_profile_from_text(t_low)
-    portals = ("vercel", "lms", "vu", "github", "leetcode", "expo", "chatgpt", "canva", "gmail")
 
-    # 1. Roman Urdu: "mera vercel open karo", "vercel kholo", "developer account se vercel open karo"
-    m = re.match(r"^(?:yar\s+|bhai\s+)?(?:(?:developer|uni|vu|84pakarmy|pakarmy|personal|account\s*[1-4])\s+(?:account\s+|profile\s+)?(?:se|me|mein)\s+)?(?:mera\s+|meri\s+|my\s+)?(" + "|".join(portals) + r")\s+(?:account\s+|portal\s+|dashboard\s+)?(?:open\s+(?:kro|karo|kardo|karein)|kholo|khol\s+do|chalao)$", t_clean, re.I)
-    if m:
-        return {"query": m.group(1).lower(), "profile_name": profile_name}
+    # 1. Broad Roman Urdu: "mera netlift dashboard open kro", "netlify open karo", "next.js kholo", "expo dashboard chalao"
+    m_urdu = re.match(
+        r"^(?:yar\s+|bhai\s+|please\s+)?(?:(?:developer|uni|vu|84pakarmy|pakarmy|personal|account\s*[1-4])\s+(?:account\s+|profile\s+)?(?:se|me|mein)\s+)?(?:mera\s+|meri\s+|my\s+|apna\s+|apni\s+)?(.+?)\s+(?:account\s+|portal\s+|dashboard\s+|website\s+|site\s+|page\s+)?(?:open\s+(?:kro|karo|kardo|karein)|kholo|khol\s+do|chalao|chala\s+do|launch\s+karo)$",
+        t_clean,
+        re.I
+    )
+    if m_urdu:
+        target = m_urdu.group(1).strip()
+        target = re.sub(r'^(?:mera|meri|my|apna|apni)\s+', '', target, flags=re.I).strip()
+        if target and len(target) > 1:
+            return {"query": target.lower(), "profile_name": profile_name}
 
-    # 2. English: "open my vercel", "open lms", "launch github"
-    m_en = re.match(r"^(?:please\s+)?(?:open|launch)\s+(?:my\s+)?(" + "|".join(portals) + r")(?:\s+(?:account|portal|dashboard))?$", t_clean, re.I)
+    # 2. Leading action Urdu: "kholo vercel", "open karo netlift", "chalao expo"
+    m_lead = re.match(
+        r"^(?:kholo|open\s+(?:kro|karo|kardo|karein)|chalao)\s+(?:mera\s+|meri\s+|my\s+)?(.+?)(?:\s+(?:account|portal|dashboard|website|site|page))?$",
+        t_clean,
+        re.I
+    )
+    if m_lead:
+        target = m_lead.group(1).strip()
+        if target and len(target) > 1:
+            return {"query": target.lower(), "profile_name": profile_name}
+
+    # 3. Broad English: "open my netlify dashboard", "open netlift", "launch next.js", "open vercel"
+    m_en = re.match(
+        r"^(?:please\s+)?(?:open|launch|browse|visit|go\s+to)(?!\s+(?:kro|karo|kardo|karein))\s+(?:my\s+)?(.+?)(?:\s+(?:account|portal|dashboard|website|site|page))?$",
+        t_clean,
+        re.I
+    )
     if m_en:
-        return {"query": m_en.group(1).lower(), "profile_name": profile_name}
+        target = m_en.group(1).strip()
+        target = re.sub(r'^(?:my|the)\s+', '', target, flags=re.I).strip()
+        if target and len(target) > 1:
+            return {"query": target.lower(), "profile_name": profile_name}
 
     return None
 
@@ -905,6 +962,12 @@ SYSTEM_PROMPT = (
     "- If asked to abort or stop an autonomous workflow: call `stop_agent_mission`. "
     "- When reporting on a mission, summarize what steps completed and present the findings crisply in Roman Urdu. "
     "17) CHROME MULTI-PROFILES, GOOGLE ACCOUNTS, YOUTUBE AUTO-PLAY & WEBSITE ANALYSIS (ACTIVE): "
+    "- CHROME BOOKMARKS & PORTAL DASHBOARDS (CRITICAL ENFORCEMENT): "
+    "M. Akmal has 83+ saved Chrome bookmarks (Netlify dashboard, Expo dashboard, LeetCode, VU LMS, Vercel, Google AI Studio, OpenRouter, InfinityFree, ZIDIO, GitHub, etc.) and full browsing history. "
+    "Whenever the user asks to open ANY website, dashboard, portal, or bookmark (e.g. 'mera netlift dashboard open kro', 'mera netlify open karo', 'next.js open karo', 'open my expo dashboard', 'open google ai studio', 'open bookmarks'): "
+    "ALWAYS call `open_smart_website(query_or_url=..., profile_name=...)` or `open_website(...)` immediately! "
+    "NEVER merely state in chat or claim verbally that you opened it without executing the tool! "
+    "`open_smart_website` automatically performs fuzzy matching for typos (e.g. 'netlift' -> Netlify dashboard) and resolves directly to his authenticated dashboard in his Primary Profile (Account 1 / Default - Rana Akmal). "
     "- YOUTUBE AUTO-PLAY: When the user asks to play a song, video, or music on YouTube (e.g. 'youtube per ye song search kro or play kro', 'youtube par tajdar e haram chalao', 'play satinder sartaaj on youtube', 'song play karo'): ALWAYS call `play_youtube_video`! This resolves the direct watch URL in ~1s and launches it so it auto-plays immediately in the browser. "
     "- WEBSITE DEEP ANALYSIS: When the user asks to open and analyze/explain any website or portal (e.g. 'ye website open karo aur analyse karo', 'open vercel and analyze it', 'website check kar ke batao kya hai'): ALWAYS call `analyze_website` with `url` and optional `profile_name`. It opens the website in browser and returns a structured analysis report! "
     "- GOOGLE 4 ACCOUNTS & CHROME PROFILES: M. Akmal has 4 Google accounts / Chrome profiles on this PC: "

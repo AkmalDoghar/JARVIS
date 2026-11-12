@@ -179,7 +179,12 @@ def score_item(item: Dict[str, Any], query: str) -> float:
     title = (item.get("title") or "").lower()
     url = (item.get("url") or "").lower()
     q = query.lower().strip()
-    tokens = [t for t in q.split() if len(t) > 1]
+    all_tokens = [t for t in q.split() if len(t) > 1]
+
+    # Filter out generic qualifier stop words if brand tokens exist
+    stop_words = {"dashboard", "portal", "website", "account", "site", "page", "open", "kro", "karo", "chalao", "mera", "meri", "khol"}
+    meaningful = [t for t in all_tokens if t not in stop_words]
+    tokens = meaningful if meaningful else all_tokens
 
     parsed = urllib.parse.urlparse(url)
     domain = parsed.netloc.lower()
@@ -203,7 +208,7 @@ def score_item(item: Dict[str, Any], query: str) -> float:
     if tokens:
         tokens_in_title = sum(1 for t in tokens if t in title)
         tokens_in_url = sum(1 for t in tokens if t in url)
-        score += (tokens_in_title * 25) + (tokens_in_url * 15)
+        score += (tokens_in_title * 35) + (tokens_in_url * 20)
         if tokens_in_title == len(tokens):
             score += 45
 
@@ -214,6 +219,21 @@ def score_item(item: Dict[str, Any], query: str) -> float:
     # 4. Visit count boost (up to 30 points)
     vc = item.get("visit_count", 0)
     score += min(vc * 0.8, 30)
+
+    # 5. Fuzzy matching for typos (e.g. "netlift" -> "netlify", "leetcord" -> "leetcode")
+    import difflib
+    title_words = re.findall(r'[a-zA-Z0-9]+', title)
+    domain_words = re.findall(r'[a-zA-Z0-9]+', domain)
+    all_words = title_words + domain_words
+    if tokens:
+        for t in tokens:
+            best_r = 0.0
+            for w in all_words:
+                r = difflib.SequenceMatcher(None, t, w).ratio()
+                if r > best_r:
+                    best_r = r
+            if best_r >= 0.75:
+                score += best_r * 80
 
     return score
 
@@ -226,10 +246,6 @@ def resolve_smart_url(query_or_url: str, profile_name: Optional[str] = None) -> 
     """
     raw = query_or_url.strip()
     lowered = raw.lower()
-    for prefix in ("open ", "kholo ", "khol ", "mera ", "meri ", "my "):
-        if lowered.startswith(prefix):
-            raw = raw[len(prefix):].strip()
-            lowered = lowered[len(prefix):].strip()
 
     # 1. Explicit Direct URL (http:// or https://)
     if raw.startswith(("http://", "https://")) and not any(k in lowered for k in ("google.com/search", "youtube.com/results")):
@@ -240,14 +256,43 @@ def resolve_smart_url(query_or_url: str, profile_name: Optional[str] = None) -> 
             "profile_name": profile_name
         }
 
-    # 2. Gather candidates from Bookmarks and History
+    # Clean leading verbs, fillers, and possessives
+    cleaned = lowered
+    for _ in range(3):
+        cleaned = re.sub(r'^(?:yar\s+|bhai\s+|please\s+|sir\s+)', '', cleaned).strip()
+        cleaned = re.sub(r'^(?:mera\s+|meri\s+|my\s+|apna\s+|apni\s+)', '', cleaned).strip()
+        cleaned = re.sub(r'^(?:open\s+|kholo\s+|khol\s+|launch\s+|start\s+|chalao\s+|go\s+to\s+|browse\s+|visit\s+)', '', cleaned).strip()
+
+    # Clean trailing action verbs
+    cleaned = re.sub(r'\s+(?:open\s+(?:kro|karo|kardo|karein)|kholo|khol\s+do|chalao|chala\s+do|launch\s+karo|open|kholo|chalao)$', '', cleaned).strip()
+
+    # Core key without generic qualifiers (dashboard, portal, website, account, site, page)
+    core_key = re.sub(r'\s+(?:dashboard|portal|website|account|site|page|link|app)$', '', cleaned).strip()
+    core_key = re.sub(r'^(?:dashboard|portal|website|account|site|page|link|app)\s+', '', core_key).strip()
+
+    # 2. Check direct portal & technology shortcuts
+    try:
+        from backend.tools.system_control import PORTAL_SHORTCUTS
+        for candidate_key in (core_key, cleaned, lowered):
+            if candidate_key and candidate_key in PORTAL_SHORTCUTS:
+                return {
+                    "url": PORTAL_SHORTCUTS[candidate_key],
+                    "title": candidate_key.title(),
+                    "source": "portal",
+                    "profile_name": profile_name
+                }
+    except Exception:
+        pass
+
+    # 3. Gather candidates from Bookmarks and History
     bookmarks = get_chrome_bookmarks(profile_name=profile_name)
-    history = search_chrome_history(query=lowered, profile_name=profile_name, limit=30)
+    search_q = core_key if core_key else cleaned
+    history = search_chrome_history(query=search_q, profile_name=profile_name, limit=30)
 
     candidates = bookmarks + history
     scored_candidates = []
     for c in candidates:
-        s = score_item(c, lowered)
+        s = score_item(c, search_q)
         if s > 30:  # Minimum relevance threshold
             scored_candidates.append((s, c))
 
@@ -267,31 +312,33 @@ def resolve_smart_url(query_or_url: str, profile_name: Optional[str] = None) -> 
             "visit_count": best.get("visit_count")
         }
 
-    # 3. Portal Shortcuts fallback
+    # 4. Portal Shortcuts fallback
     from backend.tools.system_control import PORTAL_SHORTCUTS
-    if lowered in PORTAL_SHORTCUTS:
-        return {
-            "url": PORTAL_SHORTCUTS[lowered],
-            "title": lowered.capitalize(),
-            "source": "portal",
-            "found": True,
-            "profile_name": profile_name
-        }
+    for candidate_key in (core_key, cleaned, lowered):
+        if candidate_key and candidate_key in PORTAL_SHORTCUTS:
+            return {
+                "url": PORTAL_SHORTCUTS[candidate_key],
+                "title": candidate_key.capitalize(),
+                "source": "portal",
+                "found": True,
+                "profile_name": profile_name
+            }
 
-    # 4. Domain fallback (e.g. 'github.com', 'python.org')
-    if "." in lowered and " " not in lowered:
+    # 5. Domain fallback (e.g. 'github.com', 'python.org')
+    fallback_target = core_key if core_key else cleaned
+    if "." in fallback_target and " " not in fallback_target:
         return {
-            "url": f"https://{raw}",
-            "title": raw,
+            "url": f"https://{fallback_target}",
+            "title": fallback_target,
             "source": "direct",
             "found": False,
             "profile_name": profile_name
         }
 
-    # 5. Google Search fallback
+    # 6. Google Search fallback
     return {
-        "url": f"https://www.google.com/search?q={urllib.parse.quote_plus(raw)}",
-        "title": f"Google Search: {raw}",
+        "url": f"https://www.google.com/search?q={urllib.parse.quote_plus(fallback_target)}",
+        "title": f"Google Search: {fallback_target}",
         "source": "search",
         "found": False,
         "profile_name": profile_name
@@ -318,8 +365,8 @@ def open_smart_website(
     matched_prof = resolved.get("profile_name")
     acc_num = resolved.get("account_number")
 
-    # If a specific profile was requested, prefer it
-    prof_to_use = profile_name or matched_dir or (f"Account {acc_num}" if acc_num else None)
+    # If a specific profile was requested, prefer it; otherwise strictly default to Primary Profile ('Default')
+    prof_to_use = profile_name or "Default"
 
     opened = False
     disp_profile = matched_prof

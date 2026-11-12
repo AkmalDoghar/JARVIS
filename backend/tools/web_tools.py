@@ -449,10 +449,40 @@ def analyze_website(
         _launch_browser = None
         open_chrome_profile = None
 
-    if lowered in PORTAL_SHORTCUTS:
+    # Known tech framework to real official documentation website mapping
+    TECH_DOMAIN_MAP = {
+        "next.js": "https://nextjs.org",
+        "nextjs": "https://nextjs.org",
+        "next js": "https://nextjs.org",
+        "node.js": "https://nodejs.org",
+        "nodejs": "https://nodejs.org",
+        "vue.js": "https://vuejs.org",
+        "vuejs": "https://vuejs.org",
+        "react.js": "https://react.dev",
+        "reactjs": "https://react.dev",
+        "react": "https://react.dev",
+        "express.js": "https://expressjs.com",
+        "expressjs": "https://expressjs.com",
+        "three.js": "https://threejs.org",
+        "threejs": "https://threejs.org",
+        "tailwind": "https://tailwindcss.com",
+        "tailwindcss": "https://tailwindcss.com"
+    }
+
+    if lowered in TECH_DOMAIN_MAP:
+        clean_url = TECH_DOMAIN_MAP[lowered]
+    elif lowered in PORTAL_SHORTCUTS:
         clean_url = PORTAL_SHORTCUTS[lowered]
     elif not clean_url.startswith(("http://", "https://")):
-        clean_url = "https://" + clean_url
+        try:
+            from backend.tools.chrome_bookmarks import resolve_smart_url
+            res_smart = resolve_smart_url(clean_url)
+            if res_smart.get("source") in ("bookmark", "history", "portal"):
+                clean_url = res_smart["url"]
+            else:
+                clean_url = "https://" + clean_url
+        except Exception:
+            clean_url = "https://" + clean_url
 
     parsed = urllib.parse.urlparse(clean_url)
     domain = parsed.netloc or parsed.path
