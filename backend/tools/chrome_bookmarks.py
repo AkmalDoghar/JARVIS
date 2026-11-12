@@ -228,10 +228,11 @@ def resolve_smart_url(query_or_url: str, profile_name: Optional[str] = None) -> 
     lowered = raw.lower()
     for prefix in ("open ", "kholo ", "khol ", "mera ", "meri ", "my "):
         if lowered.startswith(prefix):
+            raw = raw[len(prefix):].strip()
             lowered = lowered[len(prefix):].strip()
 
     # 1. Explicit Direct URL (http:// or https://)
-    if lowered.startswith(("http://", "https://")) and not any(k in lowered for k in ("google.com/search", "youtube.com/results")):
+    if raw.startswith(("http://", "https://")) and not any(k in lowered for k in ("google.com/search", "youtube.com/results")):
         return {
             "url": raw,
             "title": raw,

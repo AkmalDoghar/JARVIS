@@ -477,46 +477,48 @@ def open_website(url: str, inspect: bool = False) -> Dict[str, Any]:
     if clean_url.startswith("file://") or clean_url.lower().endswith((".html", ".htm", ".svg")) or os.path.exists(clean_url):
         return open_file_in_browser(clean_url, inspect=inspect)
 
-    # Check direct portal shortcuts (e.g. 'vercel', 'leetcode', 'expo', 'maps', 'google maps')
-    lowered = clean_url.lower().strip()
-    # Strip common conversational prefixes
-    for prefix in ("open ", "kholo ", "khol ", "mera ", "meri ", "my "):
-        if lowered.startswith(prefix):
-            lowered = lowered[len(prefix):].strip()
-
-    # Intelligent URL resolution: Check user's Bookmarks and History first!
+    # If input is already an explicit HTTP/HTTPS URL, preserve exact case and do not re-resolve
     resolved_info = None
-    try:
-        from backend.tools.chrome_bookmarks import resolve_smart_url
-        resolved = resolve_smart_url(lowered)
-        if resolved.get("source") in ("bookmark", "history", "portal"):
-            clean_url = resolved["url"]
-            resolved_info = resolved
-    except Exception:
-        pass
+    if not clean_url.startswith(("http://", "https://")):
+        lowered = clean_url.lower().strip()
+        # Strip common conversational prefixes
+        for prefix in ("open ", "kholo ", "khol ", "mera ", "meri ", "my "):
+            if lowered.startswith(prefix):
+                clean_url = clean_url[len(prefix):].strip()
+                lowered = lowered[len(prefix):].strip()
 
-    if not resolved_info:
-        if lowered in PORTAL_SHORTCUTS:
-            clean_url = PORTAL_SHORTCUTS[lowered]
-        else:
-            # If input is a search command or search query rather than a direct URL
-            is_search = False
-            search_query = ""
-            if lowered.startswith("google search "):
-                search_query = clean_url[14:].strip()
-                is_search = True
-            elif lowered.startswith("google "):
-                search_query = clean_url[7:].strip()
-                is_search = True
-            elif not clean_url.startswith(("http://", "https://")) and (" " in clean_url or "." not in clean_url):
-                search_query = clean_url
-                is_search = True
+        # Intelligent URL resolution: Check user's Bookmarks and History first!
+        try:
+            from backend.tools.chrome_bookmarks import resolve_smart_url
+            resolved = resolve_smart_url(clean_url)
+            if resolved.get("source") in ("bookmark", "history", "portal"):
+                clean_url = resolved["url"]
+                resolved_info = resolved
+        except Exception:
+            pass
 
-            if is_search and search_query:
-                clean_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(search_query)}"
+        if not resolved_info:
+            if lowered in PORTAL_SHORTCUTS:
+                clean_url = PORTAL_SHORTCUTS[lowered]
+            else:
+                # If input is a search command or search query rather than a direct URL
+                is_search = False
+                search_query = ""
+                if lowered.startswith("google search "):
+                    search_query = clean_url[14:].strip()
+                    is_search = True
+                elif lowered.startswith("google "):
+                    search_query = clean_url[7:].strip()
+                    is_search = True
+                elif not clean_url.startswith(("http://", "https://")) and (" " in clean_url or "." not in clean_url):
+                    search_query = clean_url
+                    is_search = True
 
-            if not clean_url.startswith(("http://", "https://")):
-                clean_url = "https://" + clean_url
+                if is_search and search_query:
+                    clean_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(search_query)}"
+
+                if not clean_url.startswith(("http://", "https://")):
+                    clean_url = "https://" + clean_url
 
     try:
         _launch_browser(clean_url, inspect=inspect)
@@ -687,21 +689,26 @@ def open_chrome_profile(profile_name: str, url: Optional[str] = None) -> Dict[st
 
     target_url = url.strip() if url else ""
     if target_url:
-        lowered_target = target_url.lower().strip()
-        for prefix in ("open ", "kholo ", "khol ", "mera ", "meri ", "my "):
-            if lowered_target.startswith(prefix):
-                lowered_target = lowered_target[len(prefix):].strip()
+        # If already an explicit HTTP/HTTPS URL, preserve exact case and skip re-resolution
+        if not target_url.startswith(("http://", "https://", "file://")):
+            raw_target = target_url
+            lowered_target = raw_target.lower().strip()
+            for prefix in ("open ", "kholo ", "khol ", "mera ", "meri ", "my "):
+                if lowered_target.startswith(prefix):
+                    raw_target = raw_target[len(prefix):].strip()
+                    lowered_target = lowered_target[len(prefix):].strip()
 
-        # Check user's Bookmarks and History for this specific profile!
-        try:
-            from backend.tools.chrome_bookmarks import resolve_smart_url
-            resolved = resolve_smart_url(lowered_target, profile_name=matched_dir)
-            target_url = resolved["url"]
-        except Exception:
-            if lowered_target in PORTAL_SHORTCUTS:
-                target_url = PORTAL_SHORTCUTS[lowered_target]
-            elif not target_url.startswith(("http://", "https://")):
-                target_url = "https://" + target_url
+            # Check user's Bookmarks and History for this specific profile!
+            try:
+                from backend.tools.chrome_bookmarks import resolve_smart_url
+                resolved = resolve_smart_url(raw_target, profile_name=matched_dir)
+                if resolved.get("source") in ("bookmark", "history", "portal"):
+                    target_url = resolved["url"]
+            except Exception:
+                if lowered_target in PORTAL_SHORTCUTS:
+                    target_url = PORTAL_SHORTCUTS[lowered_target]
+                elif not target_url.startswith(("http://", "https://")):
+                    target_url = "https://" + target_url
 
     chrome_candidates = [
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
