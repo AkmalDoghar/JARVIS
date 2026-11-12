@@ -16,6 +16,7 @@ from backend.tools import web_tools
 from backend.tools import memory_tools
 from backend.tools import vision_tools
 from backend.tools import chrome_bookmarks
+from backend.tools import browser_agent
 
 # Function Calling Tools Schemas for OpenAI / Groq / OpenRouter models
 JARVIS_TOOLS_SCHEMA: List[Dict[str, Any]] = [
@@ -1325,6 +1326,32 @@ JARVIS_TOOLS_SCHEMA: List[Dict[str, Any]] = [
             }
         }
     },
+    # Autonomous Browser-Use Agent Tool
+    {
+        "type": "function",
+        "function": {
+            "name": "autonomous_browser_agent",
+            "description": "Deploy an autonomous AI web agent (powered by Browser-Use) that can autonomously navigate real websites in Google Chrome/Chromium, click buttons, fill forms, compare prices, research products, extract structured information, or complete complex multi-step online workflows. Use when the user asks JARVIS to perform active actions on the web (e.g. 'Daraz per laptops search karke price compare karo', 'YouTube per video dhund kar play karo', 'is website per login form fill karo', 'web page se data scrape ya extract karo', 'browser agent chalao').",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "The exact step-by-step goal or instruction for the autonomous browser agent."
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "description": "Whether to keep the browser visible so user can watch the agent work live (default True)."
+                    },
+                    "max_steps": {
+                        "type": "integer",
+                        "description": "Maximum action steps allowed (default 15)."
+                    }
+                },
+                "required": ["task"]
+            }
+        }
+    },
     {
         "type": "function",
         "function": {
@@ -1702,6 +1729,7 @@ TOOL_HANDLERS = {
     "create_agent_plan": _create_agent_plan_wrapper,
     "execute_agent_mission": _execute_agent_mission_wrapper,
     "stop_agent_mission": _stop_agent_mission_wrapper,
+    "autonomous_browser_agent": browser_agent.execute_autonomous_browser,
 }
 
 
@@ -1957,6 +1985,15 @@ def get_relevant_tools_schema(query: Optional[str] = None) -> List[Dict[str, Any
         selected_names.update({
             "create_agent_plan", "execute_agent_mission", "stop_agent_mission"
         })
+
+    # Autonomous Browser-Use Agent
+    browser_agent_triggers = (
+        "browser agent", "web agent", "browser-use", "autonomous browser",
+        "daraz", "amazon", "scrape", "extract from web", "fill form", "price compare",
+        "compare prices", "website per jao aur", "web task"
+    )
+    if any(k in q for k in browser_agent_triggers):
+        selected_names.add("autonomous_browser_agent")
 
     filtered = [t for t in JARVIS_TOOLS_SCHEMA if t["function"]["name"] in selected_names]
     return filtered if filtered else JARVIS_TOOLS_SCHEMA

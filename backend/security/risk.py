@@ -108,6 +108,7 @@ TOOL_RISK_MAP: Dict[str, RiskLevel] = {
     "create_agent_plan": RiskLevel.LOW,
     "execute_agent_mission": RiskLevel.LOW,
     "stop_agent_mission": RiskLevel.LOW,
+    "autonomous_browser_agent": RiskLevel.LOW,
     
     # State modification & desktop locking (MEDIUM - Confirmation)
     "lock_computer": RiskLevel.MEDIUM,

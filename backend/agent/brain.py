@@ -943,7 +943,10 @@ SYSTEM_PROMPT = (
     "- LOCAL HTTP SERVER: When the user asks to start a local server, live server, or preview server (e.g. 'local server start karo', 'live server chalao'): call `start_local_server`. "
     "- TERMINAL IN FOLDER: When asked to open terminal or cmd in a project folder (e.g. 'terminal kholo is folder me', 'open cmd here'): call `open_in_terminal`. "
     "- PROJECT CREATION + OPEN IN VS CODE (ALL IN ONE TURN): When the user asks to create an app/project AND open it in VS Code or browser (e.g. 'Desktop per Calculator app banao, usme index.html aur style.css likho aur use VS Code mein open kar do'): "
-    "You MUST call ALL necessary tools in a SINGLE turn: call `create_folder`, `create_file` for each code file, AND `open_in_vscode` together in the first turn! Never wait for a second turn to open VS Code."
+    "You MUST call ALL necessary tools in a SINGLE turn: call `create_folder`, `create_file` for each code file, AND `open_in_vscode` together in the first turn! Never wait for a second turn to open VS Code. "
+    "19) AUTONOMOUS BROWSER AGENT (BROWSER-USE ACTIVE): You are equipped with an autonomous browser agent powered by browser-use. "
+    "- When the user asks you to interact with a website, perform complex web research, compare prices on e-commerce (e.g. Daraz, Amazon), fill out forms, scrape/extract dynamic data from websites, or complete multi-step online tasks (e.g. 'Daraz per laptops search karke price compare karo', 'YouTube per video dhund kar play karo', 'is website per login form fill karo', 'web page se data scrape ya extract karo', 'browser agent chalao', 'browser-use run karo'): "
+    "ALWAYS call `autonomous_browser_agent` with the exact task description and `visible: true` so the user can watch the browser agent navigate and perform actions live in real-time!"
 )
 
 RESPONSE_LANGUAGE_INSTRUCTIONS: Dict[str, str] = {

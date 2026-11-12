@@ -1007,6 +1007,22 @@ def api_system_open_link(request: SystemOpenLinkRequest):
         "browser": "Google Chrome"
     }
 
+class BrowserAgentRunRequest(BaseModel):
+    task: str
+    visible: Optional[bool] = True
+    max_steps: Optional[int] = 15
+
+@app.post("/api/browser/agent/run")
+def api_browser_agent_run(request: BrowserAgentRunRequest):
+    """Deploy an autonomous web agent (browser-use) to perform tasks on the web."""
+    from backend.tools.browser_agent import execute_autonomous_browser
+    res = execute_autonomous_browser(
+        task=request.task,
+        visible=bool(request.visible),
+        max_steps=request.max_steps or 15
+    )
+    return res
+
 # ======================================================================
 # PHASE 9 & 10: DESKTOP PACKAGING, GLOBAL HOTKEY & AUTOSTART ENDPOINTS
 # ======================================================================
